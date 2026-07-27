@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.1] - 2026-07-27
+
+### Added
+
+- Optional repository hierarchy toggle for switching between repository-grouped
+  and direct skill views.
+- Click-to-copy values in the Details view.
+
+### Changed
+
+- Simplified search results to prioritize source and compact wanted/installed
+  status indicators.
+- Added consistent wanted and installed emoji indicators to Details.
+- Displayed added timestamps in the user's local timezone.
+
 ## [1.0.0] - 2026-07-27
 
 ### Added

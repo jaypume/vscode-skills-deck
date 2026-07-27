@@ -71,6 +71,7 @@ export interface SkillsState {
   skills: DeclaredSkill[];
   categories: string[];
   groupBy: GroupDimension;
+  groupRepositories: boolean;
   statusFilter: StatusFilter;
   sortingOption: SortingOption;
 }

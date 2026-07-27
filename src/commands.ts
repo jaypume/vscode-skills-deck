@@ -26,6 +26,7 @@ import { installSkills, uninstallSkills, updateSkills } from './installer';
 import { reconcile, resolveDeclaredSkill } from './reconcile';
 import { discoverRepositorySkills } from './repositoryDiscovery';
 import { getConfig } from './config';
+import { installedEmoji, wantedEmoji } from './visuals';
 
 export interface CommandDeps {
   scanner: SkillScanner;
@@ -383,7 +384,9 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     const items = decorated.map(skill => ({
       id: decoratedKey(skill),
       label: skill.name,
-      detail: `${skill.repository.name} · ${skill.status} · ${skill.source || 'No source'}`,
+      detail: `${skill.source || 'No source'} · `
+        + `${wantedEmoji(skill.wanted)} `
+        + `${installedEmoji(skill.installedAgents.length > 0)}`,
     }));
     picker.items = items;
     picker.onDidChangeValue(value => {
@@ -431,6 +434,12 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   push('skillsDeck.groupByScopeCurrent', () => setGroup('scope'));
   push('skillsDeck.groupByFlat', () => setGroup('flat'));
   push('skillsDeck.groupByFlatCurrent', () => setGroup('flat'));
+  push('skillsDeck.toggleRepositoryGrouping', () => {
+    const enabled = !store.get('groupRepositories');
+    store.update('groupRepositories', enabled);
+    vscode.commands.executeCommand('setContext', 'skillsDeck.groupRepositories', enabled);
+    provider.refresh();
+  });
 
   push('skillsDeck.installSelected', async (
     node?: SkillNode,

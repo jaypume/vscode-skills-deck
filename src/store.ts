@@ -26,6 +26,7 @@ export const DEFAULTS: SkillsState = {
   skills: [],
   categories: ['Default'],
   groupBy: 'category',
+  groupRepositories: true,
   statusFilter: 'all',
   sortingOption: 'A-Z',
 };
@@ -187,6 +188,9 @@ export function normalizeState(o: Partial<SkillsState> | null): SkillsState {
 
   if (Array.isArray(raw.categories) && raw.categories.length > 0) { out.categories = raw.categories; }
   if (isGroupBy(raw.groupBy)) { out.groupBy = raw.groupBy; }
+  if (typeof raw.groupRepositories === 'boolean') {
+    out.groupRepositories = raw.groupRepositories;
+  }
   if (isStatusFilter(raw.statusFilter)) { out.statusFilter = raw.statusFilter; }
   if (isSorting(raw.sortingOption)) { out.sortingOption = raw.sortingOption; }
   return out;

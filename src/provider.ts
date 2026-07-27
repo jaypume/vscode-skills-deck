@@ -98,7 +98,12 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     if (!element) {
       // Root: bucket or flat.
       if (groupBy === 'flat') {
-        return this.renderSkills(sortSkills(visible, state.sortingOption), all, 'flat');
+        return this.renderSkills(
+          sortSkills(visible, state.sortingOption),
+          all,
+          'flat',
+          state.groupRepositories,
+        );
       }
       return this.groupBuckets(visible, groupBy);
     }
@@ -110,6 +115,7 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
         sortSkills(inBucket, state.sortingOption),
         all,
         `${groupBy}:${element.bucketKey}`,
+        state.groupRepositories,
       );
     }
     if (element.contextValue === 'repository') {
@@ -221,7 +227,10 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     skills: DecoratedSkill[],
     all: DecoratedSkill[],
     parentKey: string,
+    groupRepositories: boolean,
   ): SkillNode[] {
+    if (!groupRepositories) { return this.toSkillNodes(skills); }
+
     const totalByRepository = new Map<string, number>();
     for (const skill of all) {
       const key = repositoryKey(skill);

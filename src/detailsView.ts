@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { DecoratedSkill, SkillStatus } from './types';
-import { STATUS_VISUALS } from './visuals';
+import { installedEmoji, STATUS_VISUALS, wantedEmoji } from './visuals';
 
 type DetailsNodeKind = 'skill' | 'property' | 'placeholder';
 
@@ -76,7 +76,8 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       vscode.TreeItemCollapsibleState.Expanded,
     );
     node.id = `details:${skill.scope}:${skill.repoId}:${skill.skillId}`;
-    node.description = `${visual.desc}${visual.diff ? ' ★' : ''}`;
+    node.description = `${installedEmoji(skill.installedAgents.length > 0)} `
+      + `${visual.desc}${visual.diff ? ' ★' : ''}`;
     node.iconPath = new vscode.ThemeIcon(
       statusIcon(skill.status),
       new vscode.ThemeColor(visual.color),
@@ -93,7 +94,8 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       {
         key: 'status',
         label: 'Status',
-        value: `${visual.desc}${visual.diff ? ' ★' : ''}`,
+        value: `${installedEmoji(skill.installedAgents.length > 0)} `
+          + `${visual.desc}${visual.diff ? ' ★' : ''}`,
         icon: statusIcon(skill.status),
         color: visual.color,
       },
@@ -112,7 +114,7 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       {
         key: 'wanted',
         label: 'Wanted',
-        value: skill.wanted ? 'yes' : 'no',
+        value: `${wantedEmoji(skill.wanted)} ${skill.wanted ? 'yes' : 'no'}`,
         icon: skill.wanted ? 'check' : 'close',
       },
       { key: 'category', label: 'Category', value: skill.category, icon: 'tag' },
@@ -122,7 +124,12 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       properties.push({ key: 'note', label: 'Note', value: skill.note, icon: 'note' });
     }
     if (skill.dateAdded) {
-      properties.push({ key: 'dateAdded', label: 'Added', value: skill.dateAdded, icon: 'calendar' });
+      properties.push({
+        key: 'dateAdded',
+        label: 'Added',
+        value: formatLocalDate(skill.dateAdded),
+        icon: 'calendar',
+      });
     }
 
     return properties.map(property => {
@@ -133,7 +140,12 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       );
       node.id = `details:${skill.scope}:${skill.repoId}:${skill.skillId}:${property.key}`;
       node.description = property.value;
-      node.tooltip = property.value;
+      node.tooltip = `${property.value}\n\nClick to copy value`;
+      node.command = {
+        command: 'skillsDeck.copyDetailValue',
+        title: 'Copy Value',
+        arguments: [property.value],
+      };
       node.iconPath = new vscode.ThemeIcon(
         property.icon,
         property.color ? new vscode.ThemeColor(property.color) : undefined,
@@ -151,4 +163,18 @@ function statusIcon(status: SkillStatus): string {
     case 'unwanted-missing': return 'circle-slash';
     case 'extra': return 'sparkle';
   }
+}
+
+function formatLocalDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) { return value; }
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  }).format(date);
 }

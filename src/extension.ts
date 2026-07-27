@@ -61,9 +61,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Commands.
   context.subscriptions.push(...registerCommands({ scanner, provider, rescan }));
+  context.subscriptions.push(vscode.commands.registerCommand(
+    'skillsDeck.copyDetailValue',
+    async (value: string) => {
+      await vscode.env.clipboard.writeText(value);
+      vscode.window.setStatusBarMessage('Detail value copied', 1500);
+    },
+  ));
 
   // Initial groupBy context + first scan.
   vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', store.get('groupBy'));
+  vscode.commands.executeCommand(
+    'setContext',
+    'skillsDeck.groupRepositories',
+    store.get('groupRepositories'),
+  );
 
   // Watcher: any change under global/project skill dirs → rescan + notify.
   const watchGlobs = [...scanner.getAllGlobalDirs(), ...scanner.getAllProjectDirs()];

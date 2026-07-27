@@ -2,7 +2,7 @@
   "name": "skills-deck",
   "displayName": "Skills Deck — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "Apache-2.0",
   "publisher": "pujie",
   "engines": {
@@ -99,6 +99,12 @@
         "title": "Filter by Status",
         "category": "Skills Deck",
         "icon": "$(filter)"
+      },
+      {
+        "command": "skillsDeck.toggleRepositoryGrouping",
+        "title": "Group by Repository",
+        "category": "Skills Deck",
+        "icon": "$(repo)"
       },
       {
         "command": "skillsDeck.groupByCategory",
@@ -270,13 +276,15 @@
         { "command": "skillsDeck.groupByScope", "when": "false" },
         { "command": "skillsDeck.groupByScopeCurrent", "when": "false" },
         { "command": "skillsDeck.groupByFlat", "when": "false" },
-        { "command": "skillsDeck.groupByFlatCurrent", "when": "false" }
+        { "command": "skillsDeck.groupByFlatCurrent", "when": "false" },
+        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "false" }
       ],
       "view/title": [
         { "command": "skillsDeck.addSkill", "when": "view == skillsDeck.view", "group": "navigation@1" },
         { "submenu": "skillsDeck.groupBy", "when": "view == skillsDeck.view", "group": "navigation@2" },
-        { "command": "skillsDeck.search", "when": "view == skillsDeck.view", "group": "navigation@3" },
-        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.view", "group": "navigation@4" },
+        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "view == skillsDeck.view", "group": "navigation@3", "toggled": "skillsDeck.groupRepositories" },
+        { "command": "skillsDeck.search", "when": "view == skillsDeck.view", "group": "navigation@4" },
+        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.view", "group": "navigation@5" },
         { "command": "skillsDeck.syncToData", "when": "view == skillsDeck.view", "group": "sync@1" },
         { "command": "skillsDeck.syncFromData", "when": "view == skillsDeck.view", "group": "sync@2" },
         { "command": "skillsDeck.openDataFile", "when": "view == skillsDeck.view", "group": "settings@1" }

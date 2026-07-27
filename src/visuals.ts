@@ -19,6 +19,14 @@ export const STATUS_VISUALS: Record<SkillStatus, StatusVisual> = {
   'extra':              { color: 'charts.blue', desc: 'undeclared', diff: true },
 };
 
+export function wantedEmoji(wanted: boolean): string {
+  return wanted ? '⭐' : '🚫';
+}
+
+export function installedEmoji(installed: boolean): string {
+  return installed ? '✅' : '❌';
+}
+
 /** Layered sort rank within a bucket: clean states first, diffs next, unwanted last. */
 export function statusRank(s: SkillStatus): number {
   switch (s) {
