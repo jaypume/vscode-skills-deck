@@ -1,0 +1,313 @@
+{
+  "name": "skills-manager",
+  "displayName": "Skills Manager — Declarative Agent Skills",
+  "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "publisher": "pujie",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "agent skills",
+    "skills",
+    "claude code",
+    "cursor",
+    "copilot",
+    "windsurf",
+    "codex",
+    "skills.sh",
+    "declarative",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaypume/vscode-skills-manager"
+  },
+  "icon": "media/icon.png",
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skillsManager",
+          "title": "Skills Manager",
+          "icon": "media/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "skillsManager": [
+        {
+          "id": "skillsManager.view",
+          "name": "Skills"
+        },
+        {
+          "id": "skillsManager.details",
+          "name": "Details",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "skillsManager.addSkill",
+        "title": "Add Skill",
+        "category": "Skills Manager",
+        "icon": "$(add)"
+      },
+      {
+        "command": "skillsManager.removeSkill",
+        "title": "Remove from List",
+        "category": "Skills Manager",
+        "icon": "$(close)"
+      },
+      {
+        "command": "skillsManager.editSkill",
+        "title": "Edit Skill",
+        "category": "Skills Manager"
+      },
+      {
+        "command": "skillsManager.refresh",
+        "title": "Refresh",
+        "category": "Skills Manager",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "skillsManager.search",
+        "title": "Search Skills",
+        "category": "Skills Manager",
+        "icon": "$(search)"
+      },
+      {
+        "command": "skillsManager.filterStatus",
+        "title": "Filter by Status",
+        "category": "Skills Manager",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "skillsManager.groupByCategory",
+        "title": "Category",
+        "category": "Skills Manager",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "skillsManager.groupBySource",
+        "title": "Source",
+        "category": "Skills Manager",
+        "icon": "$(symbol-namespace)"
+      },
+      {
+        "command": "skillsManager.groupByStatus",
+        "title": "Status",
+        "category": "Skills Manager",
+        "icon": "$(circle-filled)"
+      },
+      {
+        "command": "skillsManager.groupByScope",
+        "title": "Scope",
+        "category": "Skills Manager",
+        "icon": "$(root-folder)"
+      },
+      {
+        "command": "skillsManager.groupByFlat",
+        "title": "Flat List",
+        "category": "Skills Manager",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "skillsManager.syncToData",
+        "title": "Sync to Data (Install State → List)",
+        "category": "Skills Manager",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "skillsManager.syncFromData",
+        "title": "Sync from Data (List → Install)",
+        "category": "Skills Manager",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "skillsManager.syncSkill",
+        "title": "Sync This Skill",
+        "category": "Skills Manager",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "skillsManager.toggleWanted",
+        "title": "Toggle Wanted / Not Wanted",
+        "category": "Skills Manager"
+      },
+      {
+        "command": "skillsManager.openSkillMd",
+        "title": "Open SKILL.md",
+        "category": "Skills Manager",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "skillsManager.previewSkillMd",
+        "title": "Preview SKILL.md",
+        "category": "Skills Manager",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "skillsManager.copyPath",
+        "title": "Copy Path",
+        "category": "Skills Manager"
+      },
+      {
+        "command": "skillsManager.openDataFile",
+        "title": "Open data.json",
+        "category": "Skills Manager",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "skillsManager.removeAllData",
+        "title": "Remove All Data",
+        "category": "Skills Manager"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "skillsManager.groupBy",
+        "label": "Group By",
+        "icon": "$(group-by-ref-type)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "skillsManager.removeSkill", "when": "false" },
+        { "command": "skillsManager.editSkill", "when": "false" },
+        { "command": "skillsManager.syncSkill", "when": "false" },
+        { "command": "skillsManager.toggleWanted", "when": "false" },
+        { "command": "skillsManager.openSkillMd", "when": "false" },
+        { "command": "skillsManager.previewSkillMd", "when": "false" },
+        { "command": "skillsManager.copyPath", "when": "false" },
+        { "command": "skillsManager.groupByCategory", "when": "false" },
+        { "command": "skillsManager.groupBySource", "when": "false" },
+        { "command": "skillsManager.groupByStatus", "when": "false" },
+        { "command": "skillsManager.groupByScope", "when": "false" },
+        { "command": "skillsManager.groupByFlat", "when": "false" }
+      ],
+      "view/title": [
+        { "command": "skillsManager.addSkill", "when": "view == skillsManager.view", "group": "navigation@1" },
+        { "command": "skillsManager.search", "when": "view == skillsManager.view", "group": "navigation@2" },
+        { "command": "skillsManager.refresh", "when": "view == skillsManager.view", "group": "navigation@3" },
+        { "command": "skillsManager.syncFromData", "when": "view == skillsManager.view", "group": "navigation@4" },
+        { "submenu": "skillsManager.groupBy", "when": "view == skillsManager.view", "group": "navigation@5" },
+        { "command": "skillsManager.filterStatus", "when": "view == skillsManager.view", "group": "filter@1" },
+        { "command": "skillsManager.syncToData", "when": "view == skillsManager.view", "group": "sync@1" },
+        { "command": "skillsManager.openDataFile", "when": "view == skillsManager.view", "group": "settings@1" }
+      ],
+      "skillsManager.groupBy": [
+        { "command": "skillsManager.groupByCategory", "group": "1_group@1", "toggled": "skillsManager.groupBy == 'category'" },
+        { "command": "skillsManager.groupBySource", "group": "1_group@2", "toggled": "skillsManager.groupBy == 'source'" },
+        { "command": "skillsManager.groupByStatus", "group": "1_group@3", "toggled": "skillsManager.groupBy == 'status'" },
+        { "command": "skillsManager.groupByScope", "group": "1_group@4", "toggled": "skillsManager.groupBy == 'scope'" },
+        { "command": "skillsManager.groupByFlat", "group": "1_group@5", "toggled": "skillsManager.groupBy == 'flat'" }
+      ],
+      "view/item/context": [
+        { "command": "skillsManager.syncSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@1" },
+        { "command": "skillsManager.toggleWanted", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@2" },
+        { "command": "skillsManager.removeSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@3" },
+        { "command": "skillsManager.openSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@1" },
+        { "command": "skillsManager.previewSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@2" },
+        { "command": "skillsManager.editSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "2_edit@1" },
+        { "command": "skillsManager.copyPath", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "3_info@1" }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "skillsManager.view",
+        "contents": "No skills declared yet.\n\nDeclare what skills you want, then reconcile against what's actually installed across your AI agents (Claude Code, Cursor, Windsurf, Copilot, Codex, …).\n\n[Add Skill](command:skillsManager.addSkill)\n[Sync Installed → List](command:skillsManager.syncToData)\n[Open data.json](command:skillsManager.openDataFile)",
+        "when": "skillsManager.noSkills"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Skills Manager",
+        "properties": {
+          "skills-manager.activeAgents": {
+            "type": "array",
+            "default": [
+              "canonical",
+              "claude-code",
+              "cursor",
+              "windsurf",
+              "github-copilot",
+              "codex",
+              "roo",
+              "gemini-cli",
+              "trae",
+              "kiro",
+              "continue"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "canonical",
+                "claude-code",
+                "cursor",
+                "windsurf",
+                "github-copilot",
+                "codex",
+                "roo",
+                "gemini-cli",
+                "trae",
+                "kiro",
+                "continue"
+              ]
+            },
+            "uniqueItems": true,
+            "scope": "window",
+            "markdownDescription": "Which AI agents to scan for installed skills. Agent IDs: `canonical` (skills.sh), `claude-code`, `cursor`, `windsurf`, `github-copilot`, `codex`, `roo`, `gemini-cli`, `trae`, `kiro`, `continue`."
+          },
+          "skills-manager.defaultScope": {
+            "type": "string",
+            "enum": ["global", "project", "ask"],
+            "enumDescriptions": [
+              "Install to ~/.agents/skills/ — available everywhere",
+              "Install to the current workspace",
+              "Prompt each time"
+            ],
+            "default": "global",
+            "scope": "window"
+          },
+          "skills-manager.confirmBeforeSync": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "markdownDescription": "Show a confirmation dialog before installing/uninstalling skills via sync."
+          },
+          "skills-manager.autoRefreshOnFocus": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "markdownDescription": "Re-scan skill directories when the window regains focus."
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.config.mjs --production",
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "package": "vsce package",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.93.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3"
+  }
+}

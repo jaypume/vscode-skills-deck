@@ -1,0 +1,13 @@
+.vscode/**
+src/**
+node_modules/**
+.gitignore
+.claude/**
+tsconfig.json
+esbuild.config.mjs
+.gitattributes
+**/*.map
+**/*.ts
+**/*.vsix
+media/icon-source.svg
+!dist/*.js
