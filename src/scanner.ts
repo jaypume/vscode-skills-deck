@@ -1,168 +1,220 @@
-/**
- * Skill scanner — simplified port of skills-sh-plus SkillScanner.
- *
- * Scans the skill directories of all active agents (global + project),
- * deduplicates across agents (same folderName → one entry with merged agents[]),
- * preferring the canonical (~/.agents/skills/) entry for metadata.
- *
- * First version omits WSL scanning and lock-file dual-matching; presence is
- * determined by directory existence. SKILL.md frontmatter is parsed via
- * gray-matter for display name / description.
- */
-
 import * as fs from 'fs';
-import * as path from 'path';
 import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import matter from 'gray-matter';
-import { InstalledSkill, ScanResult, SkillScope } from './types';
-import { KNOWN_AGENTS, KnownAgent } from './known-agents';
+import {
+  AgentSkillObservation,
+  InstalledSkill,
+  ResolvedAgent,
+  ScanResult,
+  SkillScope,
+} from './types';
+import * as agentStore from './agentStore';
+import { agentSkillsDir, centralSkillsDir } from './known-agents';
 import { normalizeSource } from './source';
-import { getConfig } from './config';
-
-interface AgentScanEntry {
-  skill: InstalledSkill;
-  agentDisplayName: string;
-  isCanonical: boolean;
-}
 
 interface LockEntry {
   source?: string;
   sourceUrl?: string;
-  sourceType?: string;
+}
+
+interface DirectoryEntry {
+  name: string;
+  path: string;
+  linkTarget?: string;
+  link: boolean;
+  broken: boolean;
 }
 
 export class SkillScanner {
-  /** Active agents per user configuration (default: all). */
-  private getActiveAgents(): KnownAgent[] {
-    const activeIds = getConfig<string[]>('activeAgents', []);
-    if (!activeIds || activeIds.length === 0) { return KNOWN_AGENTS; }
-    const idSet = new Set(activeIds);
-    return KNOWN_AGENTS.filter(a => idSet.has(a.id));
-  }
-
-  /** Resolve the global skill directory for a given agent. */
-  private resolveGlobalDir(agent: KnownAgent): string {
-    if (agent.envOverride) {
-      const envDir = process.env[agent.envOverride];
-      if (envDir) { return path.join(envDir, 'skills'); }
-    }
-    return path.join(os.homedir(), agent.skillsDir);
-  }
-
-  /** All global skill directories to watch. */
   getAllGlobalDirs(): string[] {
-    return this.getActiveAgents().map(a => this.resolveGlobalDir(a));
+    const central = centralSkillsDir('global');
+    const agents = agentStore.resolved().map(agent => agent.globalSkillsDir);
+    return uniquePaths([central!, ...agents]);
   }
 
-  /** All project-level skill directories (for the first workspace folder). */
   getAllProjectDirs(): string[] {
-    const ws = vscode.workspace.workspaceFolders;
-    if (!ws || ws.length === 0) { return []; }
-    const root = ws[0].uri.fsPath;
-    return this.getActiveAgents().map(a => path.join(root, a.skillsDir));
+    const central = centralSkillsDir('project');
+    const agents = agentStore.resolved()
+      .map(agent => agentSkillsDir(agent, 'project'))
+      .filter((value): value is string => Boolean(value));
+    return uniquePaths([central, ...agents].filter((value): value is string => Boolean(value)));
   }
 
-  /** The canonical global skills dir (~/.agents/skills). */
   getCanonicalGlobalDir(): string {
-    const c = KNOWN_AGENTS.find(a => a.isCanonical);
-    return c ? this.resolveGlobalDir(c) : path.join(os.homedir(), '.agents', 'skills');
+    return centralSkillsDir('global')!;
   }
 
   async scan(): Promise<ScanResult> {
-    const activeAgents = this.getActiveAgents();
+    const agents = agentStore.resolved();
+    const globalDir = centralSkillsDir('global')!;
+    const projectDir = centralSkillsDir('project');
     const globalSources = await this.readLockSources(this.globalLockPath());
+    const projectSources = projectDir
+      ? await this.readLockSources(path.join(path.dirname(path.dirname(projectDir)), 'skills-lock.json'))
+      : new Map<string, string>();
 
-    // Global skills
-    const globalEntries: AgentScanEntry[] = [];
-    for (const agent of activeAgents) {
-      const dir = this.resolveGlobalDir(agent);
-      const skills = await this.scanDirectory(dir, 'global', globalSources);
-      for (const skill of skills) {
-        globalEntries.push({ skill, agentDisplayName: agent.displayName, isCanonical: agent.isCanonical === true });
-      }
-    }
-    const globalSkills = this.deduplicateAcrossAgents(globalEntries);
+    const globalSkills = await this.scanCentralDirectory(globalDir, 'global', globalSources);
+    const projectSkills = projectDir
+      ? await this.scanCentralDirectory(projectDir, 'project', projectSources)
+      : [];
 
-    // Project skills
-    let projectSkills: InstalledSkill[] = [];
-    const ws = vscode.workspace.workspaceFolders;
-    const root = ws?.[0]?.uri.fsPath;
-    if (root) {
-      const projectSources = await this.readLockSources(path.join(root, 'skills-lock.json'));
-      const projectEntries: AgentScanEntry[] = [];
-      for (const agent of activeAgents) {
-        const dir = path.join(root, agent.skillsDir);
-        const skills = await this.scanDirectory(dir, 'project', projectSources);
-        for (const skill of skills) {
-          projectEntries.push({ skill, agentDisplayName: agent.displayName, isCanonical: agent.isCanonical === true });
-        }
-      }
-      projectSkills = this.deduplicateAcrossAgents(projectEntries);
-    }
+    const globalObservations = await this.observeAgents(
+      agents,
+      'global',
+      globalDir,
+      globalSkills,
+    );
+    const projectObservations = projectDir
+      ? await this.observeAgents(agents, 'project', projectDir, projectSkills)
+      : [];
 
-    return { globalSkills, projectSkills };
+    attachObservations(globalSkills, globalObservations);
+    attachObservations(projectSkills, projectObservations);
+
+    return {
+      globalSkills,
+      projectSkills,
+      agentSkills: [...globalObservations, ...projectObservations]
+        .filter(item => item.state === 'agent-owned'
+          || item.state === 'override'
+          || (item.enabled
+            && (item.state === 'missing' || item.state === 'broken-link'))),
+      agents,
+    };
   }
 
-  /**
-   * Deduplicate across agent dirs: same folderName → single entry with merged
-   * agents[]. Canonical entry preferred for metadata.
-   */
-  private deduplicateAcrossAgents(entries: AgentScanEntry[]): InstalledSkill[] {
-    const map = new Map<string, { skill: InstalledSkill; agents: Set<string>; hasCanonical: boolean }>();
-    for (const { skill, agentDisplayName, isCanonical } of entries) {
-      const existing = map.get(skill.folderName);
-      if (!existing) {
-        map.set(skill.folderName, {
-          skill: { ...skill, agents: [] },
-          agents: new Set([agentDisplayName]),
-          hasCanonical: isCanonical,
-        });
-      } else {
-        existing.agents.add(agentDisplayName);
-        if (isCanonical && !existing.hasCanonical) {
-          existing.skill = { ...skill, agents: [] };
-          existing.hasCanonical = true;
-        }
-      }
-    }
-    return Array.from(map.values()).map(({ skill, agents }) => ({
-      ...skill,
-      agents: Array.from(agents).sort(),
-    }));
-  }
-
-  private async scanDirectory(
+  private async scanCentralDirectory(
     dir: string,
     scope: SkillScope,
     sources: Map<string, string>,
   ): Promise<InstalledSkill[]> {
+    const entries = await this.readDirectory(dir);
     const skills: InstalledSkill[] = [];
-    try { await fs.promises.access(dir); } catch { return skills; }
-
-    let entries: fs.Dirent[];
-    try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); }
-    catch { return skills; }
-
-    for (const entry of entries) {
-      // Hidden directories may be owned by the agent runtime (for example,
-      // Codex's `.system`) and are outside user-managed skill state.
-      if (entry.name.startsWith('.')) { continue; }
-      if (!(await this.isDirectoryEntry(dir, entry))) { continue; }
-      const skillMdPath = path.join(dir, entry.name, 'SKILL.md');
-      const parsed = await this.parseSkillMd(skillMdPath);
-      // Require a SKILL.md for it to count as a skill folder.
+    for (const entry of entries.values()) {
+      if (entry.broken) { continue; }
+      const parsed = await this.parseSkillMd(path.join(entry.path, 'SKILL.md'));
       skills.push({
         folderName: entry.name,
         name: parsed?.name ?? entry.name,
         description: parsed?.description,
-        path: path.join(dir, entry.name),
+        path: entry.path,
         scope,
         agents: [],
+        observations: [],
         source: sources.get(entry.name),
       });
     }
     return skills;
+  }
+
+  private async observeAgents(
+    agents: ResolvedAgent[],
+    scope: SkillScope,
+    centralDir: string,
+    centralSkills: InstalledSkill[],
+  ): Promise<AgentSkillObservation[]> {
+    const central = new Map(centralSkills.map(skill => [skill.folderName, skill]));
+    const observations: AgentSkillObservation[] = [];
+    for (const agent of agents) {
+      const dir = agentSkillsDir(agent, scope);
+      if (!dir) { continue; }
+      const sameDirectory = path.resolve(dir) === path.resolve(centralDir);
+      const entries = sameDirectory ? new Map<string, DirectoryEntry>() : await this.readDirectory(dir);
+      const names = new Set([...central.keys(), ...entries.keys()]);
+      for (const skillId of names) {
+        const centralSkill = central.get(skillId);
+        const entry = entries.get(skillId);
+        observations.push(await this.observeEntry(
+          agent,
+          scope,
+          centralDir,
+          dir,
+          skillId,
+          centralSkill,
+          entry,
+          sameDirectory,
+        ));
+      }
+    }
+    return observations;
+  }
+
+  private async observeEntry(
+    agent: ResolvedAgent,
+    scope: SkillScope,
+    centralDir: string,
+    agentDir: string,
+    skillId: string,
+    centralSkill: InstalledSkill | undefined,
+    entry: DirectoryEntry | undefined,
+    sameDirectory: boolean,
+  ): Promise<AgentSkillObservation> {
+    const centralPath = centralSkill?.path;
+    let state: AgentSkillObservation['state'];
+    if (centralSkill && sameDirectory) {
+      state = 'managed-link';
+    } else if (centralSkill && !entry) {
+      state = 'missing';
+    } else if (!centralSkill) {
+      state = 'agent-owned';
+    } else if (entry?.link && entry.linkTarget
+      && samePath(entry.linkTarget, centralPath!)) {
+      state = 'managed-link';
+    } else if (entry?.link && entry.broken
+      && entry.linkTarget && isWithin(entry.linkTarget, centralDir)) {
+      state = 'broken-link';
+    } else {
+      state = 'override';
+    }
+
+    const parsed = entry && !entry.broken
+      ? await this.parseSkillMd(path.join(entry.path, 'SKILL.md'))
+      : null;
+    return {
+      agentId: agent.id,
+      agentName: agent.displayName,
+      enabled: agent.enabled,
+      scope,
+      skillId,
+      name: centralSkill?.name ?? parsed?.name ?? skillId,
+      path: entry?.path ?? path.join(agentDir, skillId),
+      state,
+      centralPath,
+      linkTarget: entry?.linkTarget,
+    };
+  }
+
+  private async readDirectory(dir: string): Promise<Map<string, DirectoryEntry>> {
+    const out = new Map<string, DirectoryEntry>();
+    let entries: fs.Dirent[];
+    try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); }
+    catch { return out; }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) { continue; }
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) { continue; }
+      const entryPath = path.join(dir, entry.name);
+      let linkTarget: string | undefined;
+      let broken = false;
+      if (entry.isSymbolicLink()) {
+        try {
+          const value = await fs.promises.readlink(entryPath);
+          linkTarget = path.resolve(dir, value);
+          await fs.promises.stat(entryPath);
+        } catch {
+          broken = true;
+        }
+      }
+      out.set(entry.name, {
+        name: entry.name,
+        path: entryPath,
+        link: entry.isSymbolicLink(),
+        linkTarget,
+        broken,
+      });
+    }
+    return out;
   }
 
   private globalLockPath(): string {
@@ -184,21 +236,13 @@ export class SkillScanner {
           sources.set(skillId, normalizeSource(value));
         }
       }
-    } catch { /* lock file is optional */ }
+    } catch { /* optional */ }
     return sources;
   }
 
-  /** Follows symlinks when deciding directory-ness. */
-  private async isDirectoryEntry(dir: string, entry: fs.Dirent): Promise<boolean> {
-    if (entry.isDirectory()) { return true; }
-    if (entry.isSymbolicLink()) {
-      try { return (await fs.promises.stat(path.join(dir, entry.name))).isDirectory(); }
-      catch { return false; }
-    }
-    return false;
-  }
-
-  private async parseSkillMd(skillMdPath: string): Promise<{ name: string; description?: string } | null> {
+  private async parseSkillMd(
+    skillMdPath: string,
+  ): Promise<{ name: string; description?: string } | null> {
     try {
       const raw = await fs.promises.readFile(skillMdPath, 'utf8');
       const { data } = matter(raw);
@@ -211,4 +255,39 @@ export class SkillScanner {
       return null;
     }
   }
+}
+
+function attachObservations(
+  skills: InstalledSkill[],
+  observations: AgentSkillObservation[],
+): void {
+  const bySkill = new Map<string, AgentSkillObservation[]>();
+  for (const observation of observations) {
+    if (!observation.centralPath) { continue; }
+    const list = bySkill.get(observation.skillId) ?? [];
+    list.push(observation);
+    bySkill.set(observation.skillId, list);
+  }
+  for (const skill of skills) {
+    skill.observations = bySkill.get(skill.folderName) ?? [];
+    skill.agents = skill.observations
+      .filter(item => item.enabled
+        && (item.state === 'managed-link' || item.state === 'override'))
+      .map(item => item.agentName)
+      .sort();
+  }
+}
+
+function samePath(left: string, right: string): boolean {
+  try { return fs.realpathSync(left) === fs.realpathSync(right); }
+  catch { return path.resolve(left) === path.resolve(right); }
+}
+
+function isWithin(value: string, root: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(value));
+  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+function uniquePaths(values: string[]): string[] {
+  return Array.from(new Set(values.map(value => path.resolve(value))));
 }

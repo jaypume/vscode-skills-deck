@@ -50,7 +50,19 @@ export function decorateSkill(declared: ResolvedSkill, installed: InstalledMap):
     ...declared,
     status,
     sourceType: classifySource(declared.source),
+    installed: Boolean(actual),
     installedAgents: actual?.agents ?? [],
+    missingAgents: actual?.observations
+      .filter(item => item.enabled && item.state === 'missing')
+      .map(item => item.agentName) ?? [],
+    overrideAgents: actual?.observations
+      .filter(item => item.enabled && item.state === 'override')
+      .map(item => item.agentName) ?? [],
+    brokenAgents: actual?.observations
+      .filter(item => item.enabled && item.state === 'broken-link')
+      .map(item => item.agentName) ?? [],
+    hasAgentDiff: actual?.observations.some(item =>
+      item.enabled && (item.state === 'missing' || item.state === 'broken-link')) ?? false,
     installedPath: actual?.path,
   };
 }
@@ -95,7 +107,13 @@ export function computeExtras(
         note: undefined,
         status: 'extra',
         sourceType: classifySource(installed.source ?? ''),
+        installed: true,
         installedAgents: installed.agents,
+        missingAgents: [],
+        overrideAgents: [],
+        brokenAgents: [],
+        hasAgentDiff: installed.observations.some(item =>
+          item.enabled && (item.state === 'missing' || item.state === 'broken-link')),
         installedPath: installed.path,
         repository,
         extra: true,

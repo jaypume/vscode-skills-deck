@@ -47,6 +47,10 @@
           "name": "Skills"
         },
         {
+          "id": "skillsDeck.agents",
+          "name": "Agents"
+        },
+        {
           "id": "skillsDeck.details",
           "name": "Details"
         }
@@ -242,6 +246,54 @@
         "command": "skillsDeck.removeAllData",
         "title": "Remove All Data",
         "category": "Skills Deck"
+      },
+      {
+        "command": "skillsDeck.setupAgents",
+        "title": "Configure Agents",
+        "category": "Skills Deck",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "skillsDeck.addAgent",
+        "title": "Add Custom Agent",
+        "category": "Skills Deck",
+        "icon": "$(add)"
+      },
+      {
+        "command": "skillsDeck.enableAgent",
+        "title": "Enable Agent",
+        "category": "Skills Deck",
+        "icon": "$(check)"
+      },
+      {
+        "command": "skillsDeck.disableAgent",
+        "title": "Disable Agent",
+        "category": "Skills Deck",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "skillsDeck.syncAgent",
+        "title": "Sync Agent",
+        "category": "Skills Deck",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "skillsDeck.editAgent",
+        "title": "Edit Agent Paths",
+        "category": "Skills Deck",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "skillsDeck.deleteAgent",
+        "title": "Delete Custom Agent",
+        "category": "Skills Deck",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillsDeck.replaceAgentOverride",
+        "title": "Replace with Managed Link",
+        "category": "Skills Deck",
+        "icon": "$(replace)"
       }
     ],
     "submenus": [
@@ -277,7 +329,13 @@
         { "command": "skillsDeck.groupByScopeCurrent", "when": "false" },
         { "command": "skillsDeck.groupByFlat", "when": "false" },
         { "command": "skillsDeck.groupByFlatCurrent", "when": "false" },
-        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "false" }
+        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "false" },
+        { "command": "skillsDeck.enableAgent", "when": "false" },
+        { "command": "skillsDeck.disableAgent", "when": "false" },
+        { "command": "skillsDeck.syncAgent", "when": "false" },
+        { "command": "skillsDeck.editAgent", "when": "false" },
+        { "command": "skillsDeck.deleteAgent", "when": "false" },
+        { "command": "skillsDeck.replaceAgentOverride", "when": "false" }
       ],
       "view/title": [
         { "command": "skillsDeck.addSkill", "when": "view == skillsDeck.view", "group": "navigation@1" },
@@ -287,7 +345,10 @@
         { "command": "skillsDeck.refresh", "when": "view == skillsDeck.view", "group": "navigation@5" },
         { "command": "skillsDeck.syncToData", "when": "view == skillsDeck.view", "group": "sync@1" },
         { "command": "skillsDeck.syncFromData", "when": "view == skillsDeck.view", "group": "sync@2" },
-        { "command": "skillsDeck.openDataFile", "when": "view == skillsDeck.view", "group": "settings@1" }
+        { "command": "skillsDeck.openDataFile", "when": "view == skillsDeck.view", "group": "settings@1" },
+        { "command": "skillsDeck.addAgent", "when": "view == skillsDeck.agents", "group": "navigation@1" },
+        { "command": "skillsDeck.setupAgents", "when": "view == skillsDeck.agents", "group": "navigation@2" },
+        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.agents", "group": "navigation@3" }
       ],
       "skillsDeck.groupBy": [
         { "command": "skillsDeck.groupByCategory", "when": "skillsDeck.groupBy != 'category'", "group": "1_group@1" },
@@ -315,7 +376,13 @@
         { "command": "skillsDeck.toggleWanted", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "4_manage@2" },
         { "command": "skillsDeck.removeSkill", "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./", "group": "4_manage@3" },
         { "command": "skillsDeck.updateRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@1" },
-        { "command": "skillsDeck.removeRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@3" }
+        { "command": "skillsDeck.removeRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@3" },
+        { "command": "skillsDeck.enableAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\./", "group": "inline@1" },
+        { "command": "skillsDeck.disableAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./", "group": "inline@1" },
+        { "command": "skillsDeck.syncAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./", "group": "1_manage@1" },
+        { "command": "skillsDeck.editAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\./", "group": "2_edit@1" },
+        { "command": "skillsDeck.deleteAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\.custom$/", "group": "3_delete@1" },
+        { "command": "skillsDeck.replaceAgentOverride", "when": "view == skillsDeck.agents && viewItem == agents.skill.override", "group": "1_manage@1" }
       ]
     },
     "viewsWelcome": [
@@ -362,7 +429,8 @@
             },
             "uniqueItems": true,
             "scope": "window",
-            "markdownDescription": "Which AI agents to scan for installed skills. Agent IDs: `canonical` (skills.sh), `claude-code`, `cursor`, `windsurf`, `github-copilot`, `codex`, `roo`, `gemini-cli`, `trae`, `kiro`, `continue`."
+            "deprecationMessage": "Use the Agents view. This setting is only used as a first-run selection hint.",
+            "markdownDescription": "Legacy first-run hint. Agent enablement is now managed in the Agents view."
           },
           "skills-deck.defaultScope": {
             "type": "string",

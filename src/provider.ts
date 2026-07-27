@@ -28,7 +28,8 @@ type SkillNodeContext =
   | `declaredSkill.${'wanted' | 'unwanted'}.${'installed' | 'missing'}`
   | 'extraSkill.unwanted.installed'
   | 'repository'
-  | 'group';
+  | 'group'
+  | 'placeholder';
 
 /** A tree node. Leaf = a skill; branch = a group bucket. */
 export class SkillNode extends vscode.TreeItem {
@@ -66,7 +67,12 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   private _onDidChange = new vscode.EventEmitter<SkillNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChange.event;
 
-  private scan: ScanResult = { globalSkills: [], projectSkills: [] };
+  private scan: ScanResult = {
+    globalSkills: [],
+    projectSkills: [],
+    agentSkills: [],
+    agents: [],
+  };
   private selectionId: string | undefined;
 
   setScan(scan: ScanResult): void {
@@ -92,10 +98,24 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   getChildren(element?: SkillNode): SkillNode[] {
     const state = read();
     const all = reconcile(state.skills, state.repositories, this.scan);
-    const visible = this.applyFilter(all, state.statusFilter);
     const { groupBy } = state;
+    const filtered = this.applyFilter(all, state.statusFilter);
+    const visible = groupBy === 'scope'
+      ? filtered.filter(skill => skill.hasAgentDiff)
+      : filtered;
 
     if (!element) {
+      if (groupBy === 'scope' && visible.length === 0) {
+        const node = new SkillNode(
+          this.scan.agents.some(agent => agent.enabled)
+            ? 'No Agent sync differences'
+            : 'No enabled Agents',
+          vscode.TreeItemCollapsibleState.None,
+          'placeholder',
+        );
+        node.iconPath = new vscode.ThemeIcon('info');
+        return [node];
+      }
       // Root: bucket or flat.
       if (groupBy === 'flat') {
         return this.renderSkills(
@@ -217,7 +237,7 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   private applyFilter(list: DecoratedSkill[], filter: StatusFilter): DecoratedSkill[] {
     switch (filter) {
       case 'all': return list;
-      case 'installed': return list.filter(s => s.installedAgents.length > 0);
+      case 'installed': return list.filter(s => s.installed);
       case 'unwanted': return list.filter(s => !s.wanted && !s.extra);
       case 'diff': return list.filter(s => isDiffStatus(s.status));
     }
@@ -284,7 +304,7 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   }
 
   private toSkillNode(s: DecoratedSkill): SkillNode {
-    const installed = s.installedAgents.length > 0;
+    const installed = s.installed;
     const actual = installed ? 'installed' : 'missing';
     const contextValue: SkillNodeContext = s.extra
       ? 'extraSkill.unwanted.installed'

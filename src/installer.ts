@@ -13,8 +13,9 @@ import { promisify } from 'util';
 import * as vscode from 'vscode';
 import { ResolvedSkill, SkillScope } from './types';
 import { classifySource, localPath, npxAddArg } from './source';
-import { KNOWN_AGENTS, KnownAgent } from './known-agents';
-import { getConfig } from './config';
+import { centralSkillsDir } from './known-agents';
+import { cleanupDisabledAgents, syncEnabledAgents } from './agentSync';
+import * as agentStore from './agentStore';
 
 const execFileAsync = promisify(execFile);
 
@@ -93,6 +94,14 @@ async function runBatch(operation: Operation, input: ResolvedSkill[]): Promise<v
           failures.push(...batch.map(skill => ({ skill: skill.id, detail })));
         }
       }
+      if (agentStore.read().setupCompleted) {
+        for (const scope of new Set(skills.map(skill => skill.scope))) {
+          const cleanup = await cleanupDisabledAgents(scope);
+          const sync = await syncEnabledAgents(scope);
+          failures.push(...[...cleanup.failures, ...sync.failures]
+            .map(detail => ({ skill: `${scope} agent sync`, detail })));
+        }
+      }
     },
   );
 
@@ -165,69 +174,34 @@ function uniqueSkills(skills: ResolvedSkill[]): ResolvedSkill[] {
   });
 }
 
-function getActiveAgents() {
-  const ids = getConfig<string[]>('activeAgents', []);
-  if (!ids || ids.length === 0) { return KNOWN_AGENTS; }
-  const set = new Set(ids);
-  return KNOWN_AGENTS.filter(agent => set.has(agent.id));
-}
-
-function resolveAgentDir(agent: KnownAgent, scope: SkillScope): string {
-  if (scope === 'project') {
-    const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!root) { throw new Error('No workspace open for project-scope install'); }
-    return path.join(root, agent.skillsDir);
-  }
-  const override = agent.envOverride ? process.env[agent.envOverride] : undefined;
-  return override ? path.join(override, 'skills') : path.join(os.homedir(), agent.skillsDir);
-}
-
-// ── local: plugin-managed symlinks ──────────────────────────────────────────
+// ── local: canonical library symlinks ────────────────────────────────────────
 
 async function installLocalSymlink(skill: ResolvedSkill): Promise<void> {
   const target = localPath(skill.source);
   if (!fs.existsSync(target)) {
     throw new Error(`Local source path does not exist: ${target}`);
   }
-  for (const agent of getActiveAgents()) {
-    const dir = resolveAgentDir(agent, skill.scope);
-    const link = path.join(dir, skill.id);
-    await fs.promises.mkdir(dir, { recursive: true });
+  const dir = centralSkillsDir(skill.scope);
+  if (!dir) { throw new Error('No workspace open for project-scope install'); }
+  const link = path.join(dir, skill.id);
+  await fs.promises.mkdir(dir, { recursive: true });
+  if (isCorrectSymlink(link, target)) { return; }
 
-    if (isCorrectSymlink(link, target)) { continue; }
-
-    let entryExists = false;
-    try { fs.lstatSync(link); entryExists = true; } catch { entryExists = false; }
-    if (entryExists) {
-      await fs.promises.rename(link, `${link}.bak`);
-    }
-    await fs.promises.symlink(target, link, 'dir');
+  let entryExists = false;
+  try { fs.lstatSync(link); entryExists = true; } catch { entryExists = false; }
+  if (entryExists) {
+    await fs.promises.rename(link, `${link}.bak`);
   }
+  await fs.promises.symlink(target, link, 'dir');
 }
 
 async function uninstallLocalSymlink(skill: ResolvedSkill): Promise<void> {
-  await removeSkillSymlinks(skill);
-}
-
-async function removeSkillSymlinks(
-  skill: ResolvedSkill,
-): Promise<{ removed: number; hasDirectory: boolean }> {
-  let removed = 0;
-  let hasDirectory = false;
-  for (const agent of getActiveAgents()) {
-    const dir = resolveAgentDir(agent, skill.scope);
-    const link = path.join(dir, skill.id);
-    try {
-      const stat = fs.lstatSync(link);
-      if (stat.isSymbolicLink()) {
-        await fs.promises.unlink(link);
-        removed++;
-      } else if (stat.isDirectory()) {
-        hasDirectory = true;
-      }
-    } catch { /* not present */ }
-  }
-  return { removed, hasDirectory };
+  const dir = centralSkillsDir(skill.scope);
+  if (!dir) { return; }
+  const link = path.join(dir, skill.id);
+  try {
+    if (fs.lstatSync(link).isSymbolicLink()) { await fs.promises.unlink(link); }
+  } catch { /* not present */ }
 }
 
 function isCorrectSymlink(link: string, target: string): boolean {
@@ -250,25 +224,15 @@ async function installViaNpx(skills: ResolvedSkill[]): Promise<void> {
     args.push('--skill', ...skillIds);
   }
   if (first.scope === 'global') { args.push('-g'); }
-  args.push('-y');
+  args.push('--agent', 'cline', '-y');
   await runSkillsCli(args, first.scope);
 }
 
 async function uninstallViaNpx(skills: ResolvedSkill[]): Promise<void> {
-  // The skills CLI scans with Dirent.isDirectory(), so externally managed
-  // symlinks are invisible to it. Remove those directly before falling back
-  // to the CLI for regular directories or lock-file entries.
-  const cliSkills: ResolvedSkill[] = [];
-  for (const skill of skills) {
-    const entries = await removeSkillSymlinks(skill);
-    if (entries.removed === 0 || entries.hasDirectory) { cliSkills.push(skill); }
-  }
-  if (cliSkills.length === 0) { return; }
-
-  const args = ['remove', ...cliSkills.map(skill => skill.id)];
-  if (cliSkills[0].scope === 'global') { args.push('-g'); }
+  const args = ['remove', ...skills.map(skill => skill.id)];
+  if (skills[0].scope === 'global') { args.push('-g'); }
   args.push('-y');
-  await runSkillsCli(args, cliSkills[0].scope);
+  await runSkillsCli(args, skills[0].scope);
 }
 
 async function runSkillsCli(args: string[], scope: SkillScope): Promise<void> {

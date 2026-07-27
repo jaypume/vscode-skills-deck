@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Native Agents view with built-in and custom Agent configuration.
+- Safe global and project skill synchronization through managed symlinks.
+- Agent-owned, override, missing, and broken-link observations.
+- First-run Agent detection with a preview-and-confirm workflow.
+
+### Changed
+
+- Use `~/.agents/skills` and workspace `.agents/skills` as canonical libraries.
+- Limit Scope grouping to enabled-Agent synchronization differences.
+- Keep machine-specific Agent wiring in a separate `agents.json`.
+
 ## [1.0.1] - 2026-07-27
 
 ### Added

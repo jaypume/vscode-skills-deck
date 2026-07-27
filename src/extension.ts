@@ -9,20 +9,25 @@
 
 import * as vscode from 'vscode';
 import * as store from './store';
+import * as agentStore from './agentStore';
 import { SkillScanner } from './scanner';
 import { SkillsTreeProvider, SkillNode } from './provider';
 import { DetailsTreeProvider } from './detailsView';
 import { registerCommands } from './commands';
+import { AgentsTreeProvider } from './agentsView';
+import { registerAgentCommands } from './agentCommands';
 import { onOperationCompleted, notifyOperationCompleted, disposeInstaller } from './installer';
 import { reconcile } from './reconcile';
 import { repositoryId, repositoryName } from './source';
-import { affectsConfig, getConfig } from './config';
+import { getConfig } from './config';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   store.init(context);
+  agentStore.init(context);
 
   const scanner = new SkillScanner();
   const provider = new SkillsTreeProvider();
+  const agentsProvider = new AgentsTreeProvider();
   const details = new DetailsTreeProvider();
 
   const treeView = vscode.window.createTreeView('skillsDeck.view', {
@@ -33,13 +38,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const detailsView = vscode.window.createTreeView('skillsDeck.details', {
     treeDataProvider: details,
   });
-  context.subscriptions.push(treeView, detailsView);
+  const agentsView = vscode.window.createTreeView('skillsDeck.agents', {
+    treeDataProvider: agentsProvider,
+    showCollapseAll: true,
+  });
+  context.subscriptions.push(treeView, agentsView, detailsView);
+  let detailSource: 'skill' | 'agent' = 'skill';
 
   // Rescan reads disk + pushes the result into the provider.
   const rescan = async () => {
     const scan = await scanner.scan();
     reconcileStoredRepositories(scan);
     provider.setScan(scan);
+    agentsProvider.setScan(scan);
     updateEmptyContext(scan);
     const sel = treeView.selection[0]?.skill;
     if (sel) {
@@ -51,16 +62,67 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           && s.skillId === sel.skillId);
       details.show(decorated);
     }
+    if (detailSource === 'agent') {
+      const agentSelection = agentsView.selection[0];
+      if (agentSelection?.observation && agentSelection.agent) {
+        const observation = scan.agentSkills.find(item =>
+          item.agentId === agentSelection.observation!.agentId
+          && item.scope === agentSelection.observation!.scope
+          && item.skillId === agentSelection.observation!.skillId);
+        const agent = scan.agents.find(item => item.id === agentSelection.agent!.id);
+        details.showAgentSkill(observation, agent);
+      } else if (agentSelection?.agent) {
+        const current = scan.agents.find(agent => agent.id === agentSelection.agent!.id);
+        details.showAgent(current);
+      }
+    }
   };
 
   // Tree selection → details.
   context.subscriptions.push(treeView.onDidChangeSelection(e => {
+    detailSource = 'skill';
     const skill = e.selection[0]?.skill;
     details.show(skill);
   }));
+  context.subscriptions.push(agentsView.onDidChangeSelection(e => {
+    detailSource = 'agent';
+    const node = e.selection[0];
+    if (node?.observation && node.agent) {
+      details.showAgentSkill(node.observation, node.agent);
+    } else {
+      details.showAgent(node?.agent);
+    }
+  }));
+
+  let watchers: vscode.Disposable[] = [];
+  const rebuildWatchers = () => {
+    for (const watcher of watchers) { watcher.dispose(); }
+    watchers = [];
+    const paths = [...scanner.getAllGlobalDirs(), ...scanner.getAllProjectDirs()];
+    for (const dir of paths) {
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(vscode.Uri.file(dir), '**/*'),
+      );
+      watchers.push(watcher);
+      watchers.push(
+        watcher.onDidChange(() => { notifyOperationCompleted(); }),
+        watcher.onDidCreate(() => { notifyOperationCompleted(); }),
+        watcher.onDidDelete(() => { notifyOperationCompleted(); }),
+      );
+    }
+  };
+  context.subscriptions.push({ dispose: () => {
+    for (const watcher of watchers) { watcher.dispose(); }
+    watchers = [];
+  } });
 
   // Commands.
   context.subscriptions.push(...registerCommands({ scanner, provider, rescan }));
+  context.subscriptions.push(...registerAgentCommands({
+    provider: agentsProvider,
+    rescan,
+    rebuildWatchers,
+  }));
   context.subscriptions.push(vscode.commands.registerCommand(
     'skillsDeck.copyDetailValue',
     async (value: string) => {
@@ -77,18 +139,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     store.get('groupRepositories'),
   );
 
-  // Watcher: any change under global/project skill dirs → rescan + notify.
-  const watchGlobs = [...scanner.getAllGlobalDirs(), ...scanner.getAllProjectDirs()];
-  for (const dir of watchGlobs) {
-    const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(
-      vscode.Uri.file(dir), '**/*'));
-    context.subscriptions.push(watcher);
-    context.subscriptions.push(
-      watcher.onDidChange(() => { notifyOperationCompleted(); }),
-      watcher.onDidCreate(() => { notifyOperationCompleted(); }),
-      watcher.onDidDelete(() => { notifyOperationCompleted(); }),
-    );
-  }
+  rebuildWatchers();
 
   // Installer completion → rescan.
   context.subscriptions.push(onOperationCompleted(() => { void rescan(); }));
@@ -101,10 +152,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }));
   }
 
-  // Re-scan when activeAgents config changes.
-  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
-    if (affectsConfig(e, 'activeAgents')) { void rescan(); }
+  context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+    rebuildWatchers();
+    void rescan();
   }));
+
+  let setupPromptShown = false;
+  const promptAgentSetup = () => {
+    if (setupPromptShown || agentStore.read().setupCompleted) { return; }
+    setupPromptShown = true;
+    void vscode.commands.executeCommand('skillsDeck.setupAgents');
+  };
+  context.subscriptions.push(agentsView.onDidChangeVisibility(e => {
+    if (e.visible) { promptAgentSetup(); }
+  }));
+  if (agentsView.visible) { promptAgentSetup(); }
 
   context.subscriptions.push({ dispose: disposeInstaller });
   await rescan();

@@ -253,7 +253,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     const installed = current.filter(skill =>
       skill.repoId === repository.repoId
       && skill.scope === scope
-      && skill.installedAgents.length > 0
+      && skill.installed
       && !added.some(item => item.skillId === skill.skillId));
 
     await updateSkills(installed);
@@ -273,7 +273,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     const state = store.read();
     const all = reconcile(state.skills, state.repositories, await deps.scanner.scan());
     const children = all.filter(skill => skill.repoId === repository.repoId);
-    const installed = children.filter(skill => skill.installedAgents.length > 0);
+    const installed = children.filter(skill => skill.installed);
     const action = await vscode.window.showWarningMessage(
       `删除仓库 "${repository.name}"？将卸载 ${installed.length} 个已安装 skill，`
       + `并删除其下 ${children.length} 个 skill。`,
@@ -324,7 +324,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     const sourceLess = nodes.filter(item => {
       const skill = item.skill!;
       if (skill.extra) { return false; }
-      return !hasSource(skill) && (skill.wanted || skill.installedAgents.length === 0);
+      return !hasSource(skill) && (skill.wanted || !skill.installed);
     });
     if (sourceLess.length > 0 && !(await confirmSourceLessCleanup(sourceLess))) { return; }
 
@@ -335,7 +335,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       const current = selected.skill!;
       const key = skillKey(selected);
       if (cleanupKeys.has(key)) {
-        if (current.installedAgents.length > 0) { toUninstall.push(current); }
+        if (current.installed) { toUninstall.push(current); }
         continue;
       }
       if (current.extra) {
@@ -386,7 +386,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       label: skill.name,
       detail: `${skill.source || 'No source'} · `
         + `${wantedEmoji(skill.wanted)} `
-        + `${installedEmoji(skill.installedAgents.length > 0)}`,
+        + `${installedEmoji(skill.installed)}`,
     }));
     picker.items = items;
     picker.onDidChangeValue(value => {
@@ -446,7 +446,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     selection?: readonly SkillNode[],
   ) => {
     const nodes = selectedSkillNodes(node, selection)
-      .filter(item => item.skill!.installedAgents.length === 0 && !item.skill!.extra);
+      .filter(item => !item.skill!.installed && !item.skill!.extra);
     if (nodes.length === 0) { return; }
     const sourceLess = nodes.filter(item => !hasSource(item.skill!));
     if (sourceLess.length > 0 && !(await confirmMissingSourceCleanup(sourceLess))) { return; }
@@ -473,7 +473,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     selection?: readonly SkillNode[],
   ) => {
     const nodes = selectedSkillNodes(node, selection)
-      .filter(item => item.skill!.installedAgents.length > 0);
+      .filter(item => item.skill!.installed);
     if (nodes.length === 0) { return; }
     const sourceLess = nodes.filter(item => !hasSource(item.skill!));
     if (sourceLess.length > 0 && !(await confirmSourceLessCleanup(sourceLess))) { return; }
@@ -694,7 +694,7 @@ function hasSource(skill: Pick<ResolvedSkill, 'source'>): boolean {
 }
 
 async function confirmSourceLessCleanup(nodes: SkillNode[]): Promise<boolean> {
-  const installed = nodes.some(node => node.skill!.installedAgents.length > 0);
+  const installed = nodes.some(node => node.skill!.installed);
   const action = installed ? '卸载并清理' : '从列表清理';
   const consequence = installed ? '卸载后将无法自动重新安装' : '当前无法自动重新安装';
   const question = installed ? '是否卸载并从列表清理？' : '是否直接从列表清理？';

@@ -20,6 +20,73 @@ export type StatusFilter = 'all' | 'installed' | 'unwanted' | 'diff';
 
 export type SortingOption = 'A-Z' | 'Z-A' | 'New-Old' | 'Old-New';
 
+export interface BuiltInAgent {
+  id: string;
+  displayName: string;
+  rootDir: string;
+  globalSkillsDir: string;
+  projectSkillsDir: string;
+  rootEnv?: string;
+  rootEnvSuffix?: string;
+  globalSkillsEnv?: string;
+  globalSkillsEnvSuffix?: string;
+}
+
+export interface AgentPreference {
+  id: string;
+  enabled: boolean;
+  rootDir?: string;
+  globalSkillsDir?: string;
+  projectSkillsDir?: string;
+}
+
+export interface CustomAgent {
+  id: string;
+  displayName: string;
+  rootDir: string;
+  globalSkillsDir: string;
+  projectSkillsDir: string;
+  enabled: boolean;
+}
+
+export interface AgentsState {
+  schemaVersion: 1;
+  setupCompleted: boolean;
+  preferences: AgentPreference[];
+  customAgents: CustomAgent[];
+}
+
+export interface ResolvedAgent {
+  id: string;
+  displayName: string;
+  rootDir: string;
+  globalSkillsDir: string;
+  projectSkillsDir: string;
+  enabled: boolean;
+  custom: boolean;
+  detected: boolean;
+}
+
+export type AgentSkillState =
+  | 'managed-link'
+  | 'missing'
+  | 'agent-owned'
+  | 'override'
+  | 'broken-link';
+
+export interface AgentSkillObservation {
+  agentId: string;
+  agentName: string;
+  enabled: boolean;
+  scope: SkillScope;
+  skillId: string;
+  name: string;
+  path: string;
+  state: AgentSkillState;
+  centralPath?: string;
+  linkTarget?: string;
+}
+
 export interface RepositorySkill {
   skillId: string;
   name: string;
@@ -99,6 +166,7 @@ export interface InstalledSkill {
   scope: SkillScope;
   /** Agents whose skill dirs contain this folderName. */
   agents: string[];
+  observations: AgentSkillObservation[];
   /** Lock-file source if available (informational). */
   source?: string;
 }
@@ -106,6 +174,8 @@ export interface InstalledSkill {
 export interface ScanResult {
   globalSkills: InstalledSkill[];
   projectSkills: InstalledSkill[];
+  agentSkills: AgentSkillObservation[];
+  agents: ResolvedAgent[];
 }
 
 /** A declaration with repository defaults resolved. */
@@ -120,8 +190,13 @@ export interface ResolvedSkill extends DeclaredSkill {
 export interface DecoratedSkill extends ResolvedSkill {
   status: SkillStatus;
   sourceType: SourceType;
+  installed: boolean;
   /** Agents where this skill is actually installed. Empty when missing. */
   installedAgents: string[];
+  missingAgents: string[];
+  overrideAgents: string[];
+  brokenAgents: string[];
+  hasAgentDiff: boolean;
   /** On-disk path (from scan) when installed. */
   installedPath?: string;
   /** True for undeclared-but-installed pseudo entries. */
