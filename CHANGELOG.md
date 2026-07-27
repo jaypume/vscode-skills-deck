@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-07-27
+
+### Added
+
+- Editable skill notes in the native Details view.
+- Repository navigation that opens GitHub sources or local directories.
+- Expand All and Collapse All toggles for the Skills and Agents trees.
+- A bilingual Marketplace README with an animated product demo.
+
+### Changed
+
+- Focused skill discovery, installation, and Agent synchronization on the
+  global library; project-local skill management is disabled for now.
+- Simplified Agent configuration and Details by hiding project skill paths.
+- Kept the large demo GIF in the source repository while excluding it from the
+  runtime VSIX package.
+
 ## [1.0.2] - 2026-07-27
 
 ### Added

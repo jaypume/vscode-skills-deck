@@ -34,6 +34,7 @@ interface PropertySpec {
   value: string;
   icon: string;
   color?: string;
+  command?: vscode.Command;
 }
 
 type DetailsTarget =
@@ -154,7 +155,6 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
         { key: 'detected', label: 'Detected', value: agent.detected ? 'yes' : 'no', icon: 'search' },
         { key: 'root', label: 'Parent', value: compactPath(agent.rootDir), icon: 'folder' },
         { key: 'global', label: 'Global Skills', value: compactPath(agent.globalSkillsDir), icon: 'globe' },
-        { key: 'project', label: 'Project Skills', value: agent.projectSkillsDir, icon: 'root-folder' },
       ]);
     }
     if (target.kind === 'agentSkill') {
@@ -218,8 +218,22 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       { key: 'category', label: 'Category', value: skill.category, icon: 'tag' },
       { key: 'path', label: 'Path', value: skill.installedPath ?? '—', icon: 'folder-opened' },
     ];
-    if (skill.note) {
-      properties.push({ key: 'note', label: 'Note', value: skill.note, icon: 'note' });
+    if (!skill.extra) {
+      properties.push({
+        key: 'note',
+        label: 'Notes',
+        value: skill.note || '—',
+        icon: 'note',
+        command: {
+          command: 'skillsDeck.editSkillNote',
+          title: 'Edit Notes',
+          arguments: [{
+            scope: skill.scope,
+            repoId: skill.repoId,
+            skillId: skill.skillId,
+          }],
+        },
+      });
     }
     if (skill.dateAdded) {
       properties.push({
@@ -245,8 +259,9 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
       );
       node.id = `details:${prefix}:${property.key}`;
       node.description = property.value;
-      node.tooltip = `${property.value}\n\nClick to copy value`;
-      node.command = {
+      node.tooltip = `${property.value}\n\n`
+        + (property.command ? 'Click to edit' : 'Click to copy value');
+      node.command = property.command ?? {
         command: 'skillsDeck.copyDetailValue',
         title: 'Copy Value',
         arguments: [property.value],

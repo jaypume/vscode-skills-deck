@@ -144,13 +144,10 @@ export function registerAgentCommands(deps: AgentCommandDeps): vscode.Disposable
   register('skillsDeck.syncAgent', async (node: AgentNode) => {
     const agent = node?.agent;
     if (!agent?.enabled) { return; }
-    const summary = await withAgentProgress(`Syncing ${agent.displayName}`, async () => {
-      const result = await syncAgent(agent, 'global');
-      if (vscode.workspace.workspaceFolders?.length) {
-        mergeSummary(result, await syncAgent(agent, 'project'));
-      }
-      return result;
-    });
+    const summary = await withAgentProgress(
+      `Syncing ${agent.displayName}`,
+      () => syncAgent(agent, 'global'),
+    );
     reportSummary(summary, output);
     await changed();
   });
@@ -276,19 +273,12 @@ async function collectCustomAgent(current?: CustomAgent): Promise<CustomAgent | 
     validateInput: value => value.trim() ? undefined : 'Global skills directory is required.',
   });
   if (!globalSkillsDir) { return undefined; }
-  const projectSkillsDir = await vscode.window.showInputBox({
-    title: current ? 'Edit Custom Agent' : 'Add Custom Agent',
-    prompt: 'Project skills directory (relative to workspace)',
-    value: current?.projectSkillsDir ?? `.${id}/skills`,
-    validateInput: validateProjectPath,
-  });
-  if (!projectSkillsDir) { return undefined; }
   return {
     id,
     displayName: displayName.trim(),
     rootDir: rootDir.trim(),
     globalSkillsDir: globalSkillsDir.trim(),
-    projectSkillsDir: projectSkillsDir.trim(),
+    projectSkillsDir: current?.projectSkillsDir ?? '.agents/skills',
     enabled: current?.enabled ?? false,
   };
 }
@@ -308,19 +298,12 @@ async function collectBuiltInOverride(
     value: agent.globalSkillsDir,
   });
   if (!globalSkillsDir) { return undefined; }
-  const projectSkillsDir = await vscode.window.showInputBox({
-    title: `Edit ${agent.displayName}`,
-    prompt: 'Project skills directory',
-    value: agent.projectSkillsDir,
-    validateInput: validateProjectPath,
-  });
-  if (!projectSkillsDir) { return undefined; }
   return {
     id: agent.id,
     enabled: false,
     rootDir: rootDir.trim(),
     globalSkillsDir: globalSkillsDir.trim(),
-    projectSkillsDir: projectSkillsDir.trim(),
+    projectSkillsDir: agent.projectSkillsDir,
   };
 }
 
@@ -332,16 +315,6 @@ function validateAgentId(value: string, currentId?: string): string | undefined 
     return 'Use lowercase letters, numbers, and single hyphens.';
   }
   return agentStore.isKnownId(value, currentId) ? `"${value}" already exists.` : undefined;
-}
-
-function validateProjectPath(value: string): string | undefined {
-  if (!value.trim()) { return 'Project skills directory is required.'; }
-  if (path.isAbsolute(value)) { return 'Project path must be relative to the workspace.'; }
-  const normalized = path.normalize(value);
-  if (normalized === '.') { return 'Project path must name a skills directory.'; }
-  return normalized === '..' || normalized.startsWith(`..${path.sep}`)
-    ? 'Project path must stay inside the workspace.'
-    : undefined;
 }
 
 function explicitLegacyAgentIds(): Set<string> {

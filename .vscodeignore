@@ -13,4 +13,5 @@ CLAUDE.md
 **/*.ts
 **/*.vsix
 media/icon-source.svg
+media/demo.gif
 !dist/*.js

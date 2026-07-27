@@ -97,7 +97,8 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
 
   getChildren(element?: SkillNode): SkillNode[] {
     const state = read();
-    const all = reconcile(state.skills, state.repositories, this.scan);
+    const all = reconcile(state.skills, state.repositories, this.scan)
+      .filter(skill => skill.scope === 'global');
     const { groupBy } = state;
     const filtered = this.applyFilter(all, state.statusFilter);
     const visible = groupBy === 'scope'
@@ -290,10 +291,19 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       );
       node.id = `repository:${parentKey}:${key}`;
       node.iconPath = sourceIcon(skill.sourceType, skill.source);
+      const repositorySource = skill.repository.source || skill.source;
       node.tooltip = new vscode.MarkdownString(
-        `**${skill.repository.name}**\n\nsource: \`${skill.source || '—'}\`\n\n`
-        + `${repositorySkills.length} visible skill(s)`,
+        `**${skill.repository.name}**\n\nsource: \`${repositorySource || '—'}\`\n\n`
+        + `${repositorySkills.length} visible skill(s)\n\nClick to open repository`,
       );
+      const repositoryType = parseSource(repositorySource).type;
+      if (repositoryType === 'github' || repositoryType === 'local') {
+        node.command = {
+          command: 'skillsDeck.openRepository',
+          title: 'Open Repository',
+          arguments: [repositorySource, skill.repository.name],
+        };
+      }
       nodes.push(node);
     }
     return nodes;

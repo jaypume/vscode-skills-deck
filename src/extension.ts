@@ -32,7 +32,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const treeView = vscode.window.createTreeView('skillsDeck.view', {
     treeDataProvider: provider,
-    showCollapseAll: true,
     canSelectMany: true,
   });
   const detailsView = vscode.window.createTreeView('skillsDeck.details', {
@@ -40,9 +39,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   const agentsView = vscode.window.createTreeView('skillsDeck.agents', {
     treeDataProvider: agentsProvider,
-    showCollapseAll: true,
   });
   context.subscriptions.push(treeView, agentsView, detailsView);
+  context.subscriptions.push(
+    ...registerTreeExpansion(
+      treeView,
+      provider,
+      'skillsDeck.view',
+      'skillsDeck.skillsTreeExpanded',
+      'skillsDeck.expandSkillsTree',
+      'skillsDeck.collapseSkillsTree',
+    ),
+    ...registerTreeExpansion(
+      agentsView,
+      agentsProvider,
+      'skillsDeck.agents',
+      'skillsDeck.agentsTreeExpanded',
+      'skillsDeck.expandAgentsTree',
+      'skillsDeck.collapseAgentsTree',
+    ),
+  );
   let detailSource: 'skill' | 'agent' = 'skill';
 
   // Rescan reads disk + pushes the result into the provider.
@@ -98,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const rebuildWatchers = () => {
     for (const watcher of watchers) { watcher.dispose(); }
     watchers = [];
-    const paths = [...scanner.getAllGlobalDirs(), ...scanner.getAllProjectDirs()];
+    const paths = scanner.getAllGlobalDirs();
     for (const dir of paths) {
       const watcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(vscode.Uri.file(dir), '**/*'),
@@ -156,7 +172,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     rebuildWatchers();
     void rescan();
   }));
-
   let setupPromptShown = false;
   const promptAgentSetup = () => {
     if (setupPromptShown || agentStore.read().setupCompleted) { return; }
@@ -241,8 +256,42 @@ function reconcileStoredRepositories(
 
 function updateEmptyContext(scan: { globalSkills: unknown[]; projectSkills: unknown[] }): void {
   const total = scan.globalSkills.length + scan.projectSkills.length;
-  const declared = store.get('skills').length;
+  const declared = store.get('skills')
+    .filter(skill => skill.scope === 'global')
+    .length;
   vscode.commands.executeCommand('setContext', 'skillsDeck.noSkills', total === 0 && declared === 0);
 }
 
 export function deactivate(): void { /* nothing persistent */ }
+
+function registerTreeExpansion<T>(
+  view: vscode.TreeView<T>,
+  provider: vscode.TreeDataProvider<T>,
+  viewId: string,
+  contextKey: string,
+  expandCommand: string,
+  collapseCommand: string,
+): vscode.Disposable[] {
+  const setExpanded = (expanded: boolean) =>
+    vscode.commands.executeCommand('setContext', contextKey, expanded);
+  void setExpanded(true);
+  return [
+    vscode.commands.registerCommand(expandCommand, async () => {
+      const roots = await provider.getChildren();
+      for (const root of roots ?? []) {
+        const item = await provider.getTreeItem(root);
+        if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
+          await view.reveal(root, { expand: 3, focus: false, select: false });
+        }
+      }
+      await setExpanded(true);
+    }),
+    vscode.commands.registerCommand(collapseCommand, async () => {
+      await vscode.commands.executeCommand(
+        `workbench.actions.treeView.${viewId}.collapseAll`,
+      );
+      await setExpanded(false);
+    }),
+    view.onDidExpandElement(() => { void setExpanded(true); }),
+  ];
+}

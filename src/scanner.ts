@@ -34,14 +34,6 @@ export class SkillScanner {
     return uniquePaths([central!, ...agents]);
   }
 
-  getAllProjectDirs(): string[] {
-    const central = centralSkillsDir('project');
-    const agents = agentStore.resolved()
-      .map(agent => agentSkillsDir(agent, 'project'))
-      .filter((value): value is string => Boolean(value));
-    return uniquePaths([central, ...agents].filter((value): value is string => Boolean(value)));
-  }
-
   getCanonicalGlobalDir(): string {
     return centralSkillsDir('global')!;
   }
@@ -49,16 +41,10 @@ export class SkillScanner {
   async scan(): Promise<ScanResult> {
     const agents = agentStore.resolved();
     const globalDir = centralSkillsDir('global')!;
-    const projectDir = centralSkillsDir('project');
     const globalSources = await this.readLockSources(this.globalLockPath());
-    const projectSources = projectDir
-      ? await this.readLockSources(path.join(path.dirname(path.dirname(projectDir)), 'skills-lock.json'))
-      : new Map<string, string>();
 
     const globalSkills = await this.scanCentralDirectory(globalDir, 'global', globalSources);
-    const projectSkills = projectDir
-      ? await this.scanCentralDirectory(projectDir, 'project', projectSources)
-      : [];
+    const projectSkills: InstalledSkill[] = [];
 
     const globalObservations = await this.observeAgents(
       agents,
@@ -66,9 +52,7 @@ export class SkillScanner {
       globalDir,
       globalSkills,
     );
-    const projectObservations = projectDir
-      ? await this.observeAgents(agents, 'project', projectDir, projectSkills)
-      : [];
+    const projectObservations: AgentSkillObservation[] = [];
 
     attachObservations(globalSkills, globalObservations);
     attachObservations(projectSkills, projectObservations);

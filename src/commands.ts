@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -17,6 +18,7 @@ import {
   localPath,
   normalizeSource,
   parseNpxCommand,
+  parseSource,
   repositoryId,
   repositoryName,
 } from './source';
@@ -25,7 +27,6 @@ import { SkillNode, SkillsTreeProvider } from './provider';
 import { installSkills, uninstallSkills, updateSkills } from './installer';
 import { reconcile, resolveDeclaredSkill } from './reconcile';
 import { discoverRepositorySkills } from './repositoryDiscovery';
-import { getConfig } from './config';
 import { installedEmoji, wantedEmoji } from './visuals';
 
 export interface CommandDeps {
@@ -63,8 +64,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     if (!picked) { return; }
     const input = await collectSourceInput(picked.type);
     if (!input) { return; }
-    const scope = await pickScope();
-    if (!scope) { return; }
+    const scope: SkillScope = 'global';
 
     let discovered: RepositorySkill[];
     if (classifySource(input.source) === 'github') {
@@ -314,6 +314,50 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
+  push('skillsDeck.editSkillNote', async (
+    key: Pick<DecoratedSkill, 'scope' | 'repoId' | 'skillId'>,
+  ) => {
+    const state = store.read();
+    const declaration = state.skills.find(skill =>
+      skill.scope === key.scope
+      && skill.repoId === key.repoId
+      && skill.skillId === key.skillId);
+    if (!declaration) { return; }
+    const notes = await vscode.window.showInputBox({
+      title: `Notes — ${declaration.name}`,
+      prompt: 'Add your evaluation or reminder',
+      value: declaration.note ?? '',
+    });
+    if (notes === undefined) { return; }
+    declaration.note = notes.trim() || undefined;
+    store.write(state);
+    await rescan();
+  });
+
+  push('skillsDeck.openRepository', async (source: string, name: string) => {
+    const parsed = parseSource(source);
+    if (parsed.type === 'github') {
+      const opened = await vscode.env.openExternal(vscode.Uri.parse(githubUrl(parsed.spec)));
+      if (!opened) {
+        vscode.window.showWarningMessage(`Could not open repository: ${name}`);
+      }
+      return;
+    }
+    if (parsed.type === 'local') {
+      const target = localPath(source);
+      try {
+        const stat = await fs.promises.stat(target);
+        const directory = stat.isDirectory() ? target : path.dirname(target);
+        const opened = await vscode.env.openExternal(vscode.Uri.file(directory));
+        if (!opened) {
+          vscode.window.showWarningMessage(`Could not open directory: ${directory}`);
+        }
+      } catch {
+        vscode.window.showWarningMessage(`Directory does not exist: ${target}`);
+      }
+    }
+  });
+
   push('skillsDeck.toggleWanted', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
@@ -378,7 +422,8 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   push('skillsDeck.search', async () => {
     const state = store.read();
-    const decorated = reconcile(state.skills, state.repositories, await deps.scanner.scan());
+    const decorated = reconcile(state.skills, state.repositories, await deps.scanner.scan())
+      .filter(skill => skill.scope === 'global');
     const picker = vscode.window.createQuickPick<{ id: string; label: string; detail: string }>();
     picker.placeholder = '搜索 skill（名称 / skill id / repository）';
     const items = decorated.map(skill => ({
@@ -776,19 +821,6 @@ async function collectSourceInput(type: SourceTypeLabel): Promise<SourceInput | 
   }
 }
 
-async function pickScope(): Promise<SkillScope | undefined> {
-  const preference = getConfig<string>('defaultScope', 'global');
-  if (preference === 'global' || preference === 'project') { return preference; }
-  const picked = await vscode.window.showQuickPick(
-    [
-      { label: 'Global', value: 'global' as SkillScope },
-      { label: 'Project', value: 'project' as SkillScope },
-    ],
-    { placeHolder: '安装范围' },
-  );
-  return picked?.value;
-}
-
 async function resolveInstallId(
   defaultId: string,
   scope: SkillScope,
@@ -821,6 +853,16 @@ function nextAvailableId(base: string, exists: (candidate: string) => boolean): 
 
 function repoBasename(value: string): string {
   return value.replace(/\.git$/, '').replace(/^.*\//, '').replace(/\/tree\/.*/, '').toLowerCase();
+}
+
+function githubUrl(spec: string): string {
+  const value = spec.trim();
+  if (/^https?:\/\/github\.com\//i.test(value)) { return value; }
+  const repository = value
+    .replace(/^git@github\.com:/i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/^\/+/, '');
+  return `https://github.com/${repository}`;
 }
 
 function errorMessage(error: unknown): string {

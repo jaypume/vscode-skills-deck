@@ -136,7 +136,6 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
       `ID: \`${agent.id}\``,
       `Parent: \`${compactPath(agent.rootDir)}\``,
       `Global skills: \`${compactPath(agent.globalSkillsDir)}\``,
-      `Project skills: \`${agent.projectSkillsDir}\``,
       `Detected: ${agent.detected ? 'yes' : 'no'}`,
       `Sync issues: ${issues}`,
     ].join('\n\n'));
