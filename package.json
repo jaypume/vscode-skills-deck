@@ -2,7 +2,7 @@
   "name": "skills-deck",
   "displayName": "Skills Deck — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "Apache-2.0",
   "publisher": "pujie",
   "engines": {
@@ -335,94 +335,387 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "skillsDeck.removeSkill", "when": "false" },
-        { "command": "skillsDeck.removeRepository", "when": "false" },
-        { "command": "skillsDeck.updateRepository", "when": "false" },
-        { "command": "skillsDeck.editSkill", "when": "false" },
-        { "command": "skillsDeck.installSelected", "when": "false" },
-        { "command": "skillsDeck.uninstallSelected", "when": "false" },
-        { "command": "skillsDeck.toggleWanted", "when": "false" },
-        { "command": "skillsDeck.inlineWanted", "when": "false" },
-        { "command": "skillsDeck.inlineUnwanted", "when": "false" },
-        { "command": "skillsDeck.inlineInstalled", "when": "false" },
-        { "command": "skillsDeck.inlineMissing", "when": "false" },
-        { "command": "skillsDeck.openSkillMd", "when": "false" },
-        { "command": "skillsDeck.previewSkillMd", "when": "false" },
-        { "command": "skillsDeck.copyPath", "when": "false" },
-        { "command": "skillsDeck.groupByCategory", "when": "false" },
-        { "command": "skillsDeck.groupByCategoryCurrent", "when": "false" },
-        { "command": "skillsDeck.groupBySource", "when": "false" },
-        { "command": "skillsDeck.groupBySourceCurrent", "when": "false" },
-        { "command": "skillsDeck.groupByStatus", "when": "false" },
-        { "command": "skillsDeck.groupByStatusCurrent", "when": "false" },
-        { "command": "skillsDeck.groupByScope", "when": "false" },
-        { "command": "skillsDeck.groupByScopeCurrent", "when": "false" },
-        { "command": "skillsDeck.groupByFlat", "when": "false" },
-        { "command": "skillsDeck.groupByFlatCurrent", "when": "false" },
-        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "false" },
-        { "command": "skillsDeck.enableAgent", "when": "false" },
-        { "command": "skillsDeck.disableAgent", "when": "false" },
-        { "command": "skillsDeck.syncAgent", "when": "false" },
-        { "command": "skillsDeck.editAgent", "when": "false" },
-        { "command": "skillsDeck.deleteAgent", "when": "false" },
-        { "command": "skillsDeck.replaceAgentOverride", "when": "false" },
-        { "command": "skillsDeck.openAgentSkillsDirectory", "when": "false" },
-        { "command": "skillsDeck.expandSkillsTree", "when": "false" },
-        { "command": "skillsDeck.collapseSkillsTree", "when": "false" },
-        { "command": "skillsDeck.expandAgentsTree", "when": "false" },
-        { "command": "skillsDeck.collapseAgentsTree", "when": "false" }
+        {
+          "command": "skillsDeck.removeSkill",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.removeRepository",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.updateRepository",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.editSkill",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.installSelected",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.uninstallSelected",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.toggleWanted",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.inlineWanted",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.inlineUnwanted",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.inlineInstalled",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.inlineMissing",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.openSkillMd",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.previewSkillMd",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByCategory",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByCategoryCurrent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupBySource",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupBySourceCurrent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByStatus",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByStatusCurrent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByScope",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByScopeCurrent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByFlat",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.groupByFlatCurrent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.toggleRepositoryGrouping",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.enableAgent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.disableAgent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.syncAgent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.editAgent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.deleteAgent",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.replaceAgentOverride",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.openAgentSkillsDirectory",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.expandSkillsTree",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.collapseSkillsTree",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.expandAgentsTree",
+          "when": "false"
+        },
+        {
+          "command": "skillsDeck.collapseAgentsTree",
+          "when": "false"
+        }
       ],
       "view/title": [
-        { "command": "skillsDeck.addSkill", "when": "view == skillsDeck.view", "group": "navigation@1" },
-        { "submenu": "skillsDeck.groupBy", "when": "view == skillsDeck.view", "group": "navigation@2" },
-        { "command": "skillsDeck.toggleRepositoryGrouping", "when": "view == skillsDeck.view", "group": "navigation@3", "toggled": "skillsDeck.groupRepositories" },
-        { "command": "skillsDeck.search", "when": "view == skillsDeck.view", "group": "navigation@4" },
-        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.view", "group": "navigation@5" },
-        { "command": "skillsDeck.collapseSkillsTree", "when": "view == skillsDeck.view && skillsDeck.skillsTreeExpanded", "group": "navigation@6" },
-        { "command": "skillsDeck.expandSkillsTree", "when": "view == skillsDeck.view && !skillsDeck.skillsTreeExpanded", "group": "navigation@6" },
-        { "command": "skillsDeck.syncToData", "when": "view == skillsDeck.view", "group": "sync@1" },
-        { "command": "skillsDeck.syncFromData", "when": "view == skillsDeck.view", "group": "sync@2" },
-        { "command": "skillsDeck.openDataFile", "when": "view == skillsDeck.view", "group": "settings@1" },
-        { "command": "skillsDeck.addAgent", "when": "view == skillsDeck.agents", "group": "navigation@1" },
-        { "command": "skillsDeck.setupAgents", "when": "view == skillsDeck.agents", "group": "navigation@2" },
-        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.agents", "group": "navigation@3" },
-        { "command": "skillsDeck.collapseAgentsTree", "when": "view == skillsDeck.agents && skillsDeck.agentsTreeExpanded", "group": "navigation@4" },
-        { "command": "skillsDeck.expandAgentsTree", "when": "view == skillsDeck.agents && !skillsDeck.agentsTreeExpanded", "group": "navigation@4" }
+        {
+          "command": "skillsDeck.addSkill",
+          "when": "view == skillsDeck.view",
+          "group": "navigation@1"
+        },
+        {
+          "submenu": "skillsDeck.groupBy",
+          "when": "view == skillsDeck.view",
+          "group": "navigation@2"
+        },
+        {
+          "command": "skillsDeck.toggleRepositoryGrouping",
+          "when": "view == skillsDeck.view",
+          "group": "navigation@3",
+          "toggled": "skillsDeck.groupRepositories"
+        },
+        {
+          "command": "skillsDeck.search",
+          "when": "view == skillsDeck.view",
+          "group": "navigation@4"
+        },
+        {
+          "command": "skillsDeck.refresh",
+          "when": "view == skillsDeck.view",
+          "group": "navigation@5"
+        },
+        {
+          "command": "skillsDeck.collapseSkillsTree",
+          "when": "view == skillsDeck.view && skillsDeck.skillsTreeExpanded",
+          "group": "navigation@6"
+        },
+        {
+          "command": "skillsDeck.expandSkillsTree",
+          "when": "view == skillsDeck.view && !skillsDeck.skillsTreeExpanded",
+          "group": "navigation@6"
+        },
+        {
+          "command": "skillsDeck.syncToData",
+          "when": "view == skillsDeck.view",
+          "group": "sync@1"
+        },
+        {
+          "command": "skillsDeck.syncFromData",
+          "when": "view == skillsDeck.view",
+          "group": "sync@2"
+        },
+        {
+          "command": "skillsDeck.openDataFile",
+          "when": "view == skillsDeck.view",
+          "group": "settings@1"
+        },
+        {
+          "command": "skillsDeck.addAgent",
+          "when": "view == skillsDeck.agents",
+          "group": "navigation@1"
+        },
+        {
+          "command": "skillsDeck.setupAgents",
+          "when": "view == skillsDeck.agents",
+          "group": "navigation@2"
+        },
+        {
+          "command": "skillsDeck.refresh",
+          "when": "view == skillsDeck.agents",
+          "group": "navigation@3"
+        },
+        {
+          "command": "skillsDeck.collapseAgentsTree",
+          "when": "view == skillsDeck.agents && skillsDeck.agentsTreeExpanded",
+          "group": "navigation@4"
+        },
+        {
+          "command": "skillsDeck.expandAgentsTree",
+          "when": "view == skillsDeck.agents && !skillsDeck.agentsTreeExpanded",
+          "group": "navigation@4"
+        }
       ],
       "skillsDeck.groupBy": [
-        { "command": "skillsDeck.groupByCategory", "when": "skillsDeck.groupBy != 'category'", "group": "1_group@1" },
-        { "command": "skillsDeck.groupByCategoryCurrent", "when": "skillsDeck.groupBy == 'category'", "group": "1_group@1" },
-        { "command": "skillsDeck.groupBySource", "when": "skillsDeck.groupBy != 'source'", "group": "1_group@2" },
-        { "command": "skillsDeck.groupBySourceCurrent", "when": "skillsDeck.groupBy == 'source'", "group": "1_group@2" },
-        { "command": "skillsDeck.groupByStatus", "when": "skillsDeck.groupBy != 'status'", "group": "1_group@3" },
-        { "command": "skillsDeck.groupByStatusCurrent", "when": "skillsDeck.groupBy == 'status'", "group": "1_group@3" },
-        { "command": "skillsDeck.groupByScope", "when": "skillsDeck.groupBy != 'scope'", "group": "1_group@4" },
-        { "command": "skillsDeck.groupByScopeCurrent", "when": "skillsDeck.groupBy == 'scope'", "group": "1_group@4" },
-        { "command": "skillsDeck.groupByFlat", "when": "skillsDeck.groupBy != 'flat'", "group": "1_group@5" },
-        { "command": "skillsDeck.groupByFlatCurrent", "when": "skillsDeck.groupBy == 'flat'", "group": "1_group@5" }
+        {
+          "command": "skillsDeck.groupByCategory",
+          "when": "skillsDeck.groupBy != 'category'",
+          "group": "1_group@1"
+        },
+        {
+          "command": "skillsDeck.groupByCategoryCurrent",
+          "when": "skillsDeck.groupBy == 'category'",
+          "group": "1_group@1"
+        },
+        {
+          "command": "skillsDeck.groupBySource",
+          "when": "skillsDeck.groupBy != 'source'",
+          "group": "1_group@2"
+        },
+        {
+          "command": "skillsDeck.groupBySourceCurrent",
+          "when": "skillsDeck.groupBy == 'source'",
+          "group": "1_group@2"
+        },
+        {
+          "command": "skillsDeck.groupByStatus",
+          "when": "skillsDeck.groupBy != 'status'",
+          "group": "1_group@3"
+        },
+        {
+          "command": "skillsDeck.groupByStatusCurrent",
+          "when": "skillsDeck.groupBy == 'status'",
+          "group": "1_group@3"
+        },
+        {
+          "command": "skillsDeck.groupByScope",
+          "when": "skillsDeck.groupBy != 'scope'",
+          "group": "1_group@4"
+        },
+        {
+          "command": "skillsDeck.groupByScopeCurrent",
+          "when": "skillsDeck.groupBy == 'scope'",
+          "group": "1_group@4"
+        },
+        {
+          "command": "skillsDeck.groupByFlat",
+          "when": "skillsDeck.groupBy != 'flat'",
+          "group": "1_group@5"
+        },
+        {
+          "command": "skillsDeck.groupByFlatCurrent",
+          "when": "skillsDeck.groupBy == 'flat'",
+          "group": "1_group@5"
+        }
       ],
       "view/item/context": [
-        { "command": "skillsDeck.inlineWanted", "when": "view == skillsDeck.view && viewItem =~ /\\.wanted\\./", "group": "inline@1" },
-        { "command": "skillsDeck.inlineUnwanted", "when": "view == skillsDeck.view && viewItem =~ /\\.unwanted\\./", "group": "inline@1" },
-        { "command": "skillsDeck.inlineInstalled", "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/", "group": "inline@2" },
-        { "command": "skillsDeck.inlineMissing", "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/", "group": "inline@2" },
-        { "command": "skillsDeck.openSkillMd", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "1_open@1" },
-        { "command": "skillsDeck.previewSkillMd", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "1_open@2" },
-        { "command": "skillsDeck.editSkill", "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./", "group": "2_edit@1" },
-        { "command": "skillsDeck.copyPath", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "3_info@1" },
-        { "command": "skillsDeck.installSelected", "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/", "group": "4_manage@1" },
-        { "command": "skillsDeck.uninstallSelected", "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/", "group": "4_manage@1" },
-        { "command": "skillsDeck.toggleWanted", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "4_manage@2" },
-        { "command": "skillsDeck.removeSkill", "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./", "group": "4_manage@3" },
-        { "command": "skillsDeck.updateRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@1" },
-        { "command": "skillsDeck.removeRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@3" },
-        { "command": "skillsDeck.enableAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\./", "group": "inline@1" },
-        { "command": "skillsDeck.disableAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./", "group": "inline@1" },
-        { "command": "skillsDeck.syncAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./", "group": "1_manage@1" },
-        { "command": "skillsDeck.editAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\./", "group": "2_edit@1" },
-        { "command": "skillsDeck.deleteAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\.custom$/", "group": "3_delete@1" },
-        { "command": "skillsDeck.replaceAgentOverride", "when": "view == skillsDeck.agents && viewItem == agents.skill.override", "group": "1_manage@1" },
-        { "command": "skillsDeck.openAgentSkillsDirectory", "when": "view == skillsDeck.agents && (viewItem == agents.library || viewItem =~ /^agents\\.agent\\./)", "group": "2_open@1" }
+        {
+          "command": "skillsDeck.inlineWanted",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.wanted\\./",
+          "group": "inline@1"
+        },
+        {
+          "command": "skillsDeck.inlineUnwanted",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.unwanted\\./",
+          "group": "inline@1"
+        },
+        {
+          "command": "skillsDeck.inlineInstalled",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "skillsDeck.inlineMissing",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "skillsDeck.openSkillMd",
+          "when": "view == skillsDeck.view && viewItem =~ /Skill/",
+          "group": "1_open@1"
+        },
+        {
+          "command": "skillsDeck.previewSkillMd",
+          "when": "view == skillsDeck.view && viewItem =~ /Skill/",
+          "group": "1_open@2"
+        },
+        {
+          "command": "skillsDeck.editSkill",
+          "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "skillsDeck.copyPath",
+          "when": "view == skillsDeck.view && viewItem =~ /Skill/",
+          "group": "3_info@1"
+        },
+        {
+          "command": "skillsDeck.installSelected",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/",
+          "group": "4_manage@1"
+        },
+        {
+          "command": "skillsDeck.uninstallSelected",
+          "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/",
+          "group": "4_manage@1"
+        },
+        {
+          "command": "skillsDeck.toggleWanted",
+          "when": "view == skillsDeck.view && viewItem =~ /Skill/",
+          "group": "4_manage@2"
+        },
+        {
+          "command": "skillsDeck.removeSkill",
+          "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./",
+          "group": "4_manage@3"
+        },
+        {
+          "command": "skillsDeck.updateRepository",
+          "when": "view == skillsDeck.view && viewItem == repository",
+          "group": "4_manage@1"
+        },
+        {
+          "command": "skillsDeck.removeRepository",
+          "when": "view == skillsDeck.view && viewItem == repository",
+          "group": "4_manage@3"
+        },
+        {
+          "command": "skillsDeck.enableAgent",
+          "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\./",
+          "group": "inline@1"
+        },
+        {
+          "command": "skillsDeck.disableAgent",
+          "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./",
+          "group": "inline@1"
+        },
+        {
+          "command": "skillsDeck.syncAgent",
+          "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./",
+          "group": "1_manage@1"
+        },
+        {
+          "command": "skillsDeck.editAgent",
+          "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\./",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "skillsDeck.deleteAgent",
+          "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\.custom$/",
+          "group": "3_delete@1"
+        },
+        {
+          "command": "skillsDeck.replaceAgentOverride",
+          "when": "view == skillsDeck.agents && viewItem == agents.skill.override",
+          "group": "1_manage@1"
+        },
+        {
+          "command": "skillsDeck.openAgentSkillsDirectory",
+          "when": "view == skillsDeck.agents && (viewItem == agents.library || viewItem =~ /^agents\\.agent\\./)",
+          "group": "2_open@1"
+        }
       ]
     },
     "viewsWelcome": [
