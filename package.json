@@ -2,7 +2,7 @@
   "name": "skills-manager",
   "displayName": "Skills Manager — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "publisher": "pujie",
   "engines": {

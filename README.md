@@ -12,11 +12,24 @@ installed state in its data file.
 - Reconcile wanted and installed skills with clear status indicators
 - Scan global and workspace skill directories across supported AI agents
 - Add skills from GitHub, skills.sh commands, skillhub.cn links, or local paths
-- Install and remove skills from the declared list
+- Discover and selectively install skills from multi-skill GitHub repositories
+- Update repositories to find new skills and refresh installed skill code
+- Install, uninstall, and update in the background without opening a terminal
+- Manage multiple selected skills from context menus
 - Group by category, source, status, or scope from one toolbar menu
 - Filter by installation state and search by skill name or ID
-- Inspect the selected skill in the Details view
+- Inspect the selected skill in a native Details view
 - Keep declarations in a portable `data.json`
+
+## Repository model
+
+Skills remain the smallest management unit. A repository provides shared
+source, category, and wanted defaults, while each child skill can override
+them.
+
+Single-skill repositories render directly as skill items. Multi-skill
+repositories use a compact parent node so their children stay organized without
+changing skill-level grouping, filtering, or status behavior.
 
 ## Status model
 
@@ -37,9 +50,11 @@ Open **Skills Manager** from the Activity Bar.
 3. Use **Sync List → Install** to reconcile installed skills with the list.
 4. Use the **Group By** dropdown to switch between category, source, status,
    scope, and a flat list.
+5. Right-click a multi-skill repository to discover new skills and update its
+   installed children.
 
 Local sources are installed as symbolic links. Other supported sources are
-installed through the `skills` CLI.
+installed through the `skills` CLI in the background.
 
 ## Data
 
