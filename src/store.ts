@@ -9,7 +9,6 @@
  *
  * The data file lives at:
  *   <globalStorageUri>/data.json
- *   i.e. User/globalStorage/pujie.skills-manager/data.json
  */
 
 import * as fs from 'fs';
@@ -19,6 +18,7 @@ import { DeclaredSkill, SkillRepository, SkillsState } from './types';
 import { repositoryId, repositoryName } from './source';
 
 const DATA_FILE = 'data.json';
+const LEGACY_EXTENSION_ID = 'pujie.skills-manager';
 
 export const DEFAULTS: SkillsState = {
   schemaVersion: 2,
@@ -35,7 +35,25 @@ let file: string | null = null;
 /** Initialize the store path. Call once in activate(). */
 export function init(context: vscode.ExtensionContext): void {
   file = path.join(context.globalStorageUri.fsPath, DATA_FILE);
+  migrateLegacyData(context);
   migrateStoredState();
+}
+
+function migrateLegacyData(context: vscode.ExtensionContext): void {
+  const current = getStatePath();
+  if (fs.existsSync(current)) { return; }
+  const legacy = path.join(
+    path.dirname(context.globalStorageUri.fsPath),
+    LEGACY_EXTENSION_ID,
+    DATA_FILE,
+  );
+  if (!fs.existsSync(legacy)) { return; }
+  try {
+    fs.mkdirSync(path.dirname(current), { recursive: true });
+    fs.copyFileSync(legacy, current, fs.constants.COPYFILE_EXCL);
+  } catch (error) {
+    console.warn('[skills-deck] migrate legacy data failed:', error);
+  }
 }
 
 function getStatePath(): string {
@@ -51,7 +69,7 @@ export function read(): SkillsState {
       return normalizeState(JSON.parse(fs.readFileSync(p, 'utf8')));
     }
   } catch (e) {
-    console.warn('[skills-manager] read store failed:', e);
+    console.warn('[skills-deck] read store failed:', e);
   }
   return { ...DEFAULTS };
 }
@@ -63,7 +81,7 @@ export function write(state: SkillsState): void {
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, `${JSON.stringify(sortKeys(state), null, 2)}\n`, 'utf8');
   } catch (e) {
-    console.warn('[skills-manager] write store failed:', e);
+    console.warn('[skills-deck] write store failed:', e);
   }
 }
 
@@ -182,7 +200,7 @@ function migrateStoredState(): void {
     if (raw.schemaVersion === 2 && Array.isArray(raw.repositories)) { return; }
     write(normalizeState(raw));
   } catch (e) {
-    console.warn('[skills-manager] migrate store failed:', e);
+    console.warn('[skills-deck] migrate store failed:', e);
   }
 }
 

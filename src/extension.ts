@@ -16,6 +16,7 @@ import { registerCommands } from './commands';
 import { onOperationCompleted, notifyOperationCompleted, disposeInstaller } from './installer';
 import { reconcile } from './reconcile';
 import { repositoryId, repositoryName } from './source';
+import { affectsConfig, getConfig } from './config';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   store.init(context);
@@ -24,12 +25,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const provider = new SkillsTreeProvider();
   const details = new DetailsTreeProvider();
 
-  const treeView = vscode.window.createTreeView('skillsManager.view', {
+  const treeView = vscode.window.createTreeView('skillsDeck.view', {
     treeDataProvider: provider,
     showCollapseAll: true,
     canSelectMany: true,
   });
-  const detailsView = vscode.window.createTreeView('skillsManager.details', {
+  const detailsView = vscode.window.createTreeView('skillsDeck.details', {
     treeDataProvider: details,
   });
   context.subscriptions.push(treeView, detailsView);
@@ -62,7 +63,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(...registerCommands({ scanner, provider, rescan }));
 
   // Initial groupBy context + first scan.
-  vscode.commands.executeCommand('setContext', 'skillsManager.groupBy', store.get('groupBy'));
+  vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', store.get('groupBy'));
 
   // Watcher: any change under global/project skill dirs → rescan + notify.
   const watchGlobs = [...scanner.getAllGlobalDirs(), ...scanner.getAllProjectDirs()];
@@ -81,8 +82,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(onOperationCompleted(() => { void rescan(); }));
 
   // Focus rescan.
-  const autoRefresh = vscode.workspace.getConfiguration('skills-manager')
-    .get<boolean>('autoRefreshOnFocus', true);
+  const autoRefresh = getConfig<boolean>('autoRefreshOnFocus', true);
   if (autoRefresh) {
     context.subscriptions.push(vscode.window.onDidChangeWindowState(e => {
       if (e.focused) { void rescan(); }
@@ -91,7 +91,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Re-scan when activeAgents config changes.
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
-    if (e.affectsConfiguration('skills-manager.activeAgents')) { void rescan(); }
+    if (affectsConfig(e, 'activeAgents')) { void rescan(); }
   }));
 
   context.subscriptions.push({ dispose: disposeInstaller });
@@ -168,7 +168,7 @@ function reconcileStoredRepositories(
 function updateEmptyContext(scan: { globalSkills: unknown[]; projectSkills: unknown[] }): void {
   const total = scan.globalSkills.length + scan.projectSkills.length;
   const declared = store.get('skills').length;
-  vscode.commands.executeCommand('setContext', 'skillsManager.noSkills', total === 0 && declared === 0);
+  vscode.commands.executeCommand('setContext', 'skillsDeck.noSkills', total === 0 && declared === 0);
 }
 
 export function deactivate(): void { /* nothing persistent */ }

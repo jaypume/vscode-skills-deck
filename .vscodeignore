@@ -6,6 +6,7 @@ node_modules/**
 tsconfig.json
 esbuild.config.mjs
 .gitattributes
+.agents/**
 AGENTS.md
 CLAUDE.md
 **/*.map

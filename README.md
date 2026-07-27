@@ -1,9 +1,9 @@
-# Skills Manager
+# Skills Deck
 
 Declaratively manage Agent Skills across Claude Code, Codex, Cursor, Windsurf,
 GitHub Copilot, and other compatible agents.
 
-Declare the skills you want once. Skills Manager scans what is installed,
+Declare the skills you want once. Skills Deck scans what is installed,
 compares it with that declaration, and shows the difference without duplicating
 installed state in its data file.
 
@@ -43,7 +43,7 @@ changing skill-level grouping, filtering, or status behavior.
 
 ## Usage
 
-Open **Skills Manager** from the Activity Bar.
+Open **Skills Deck** from the Activity Bar.
 
 1. Use **Add Skill** to declare a skill and optionally install it.
 2. Use **Sync Installed → List** to initialize declarations from your machine.

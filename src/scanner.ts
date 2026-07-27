@@ -18,6 +18,7 @@ import matter from 'gray-matter';
 import { InstalledSkill, ScanResult, SkillScope } from './types';
 import { KNOWN_AGENTS, KnownAgent } from './known-agents';
 import { normalizeSource } from './source';
+import { getConfig } from './config';
 
 interface AgentScanEntry {
   skill: InstalledSkill;
@@ -34,8 +35,7 @@ interface LockEntry {
 export class SkillScanner {
   /** Active agents per user configuration (default: all). */
   private getActiveAgents(): KnownAgent[] {
-    const activeIds = vscode.workspace.getConfiguration('skills-manager')
-      .get<string[]>('activeAgents');
+    const activeIds = getConfig<string[]>('activeAgents', []);
     if (!activeIds || activeIds.length === 0) { return KNOWN_AGENTS; }
     const idSet = new Set(activeIds);
     return KNOWN_AGENTS.filter(a => idSet.has(a.id));

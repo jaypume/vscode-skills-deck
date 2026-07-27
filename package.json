@@ -1,6 +1,6 @@
 {
-  "name": "skills-manager",
-  "displayName": "Skills Manager — Declarative Agent Skills",
+  "name": "skills-deck",
+  "displayName": "Skills Deck — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
   "version": "1.0.0",
   "license": "Apache-2.0",
@@ -26,7 +26,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/jaypume/vscode-skills-manager"
+    "url": "https://github.com/jaypume/skills-deck"
   },
   "icon": "media/icon.png",
   "main": "./dist/extension.js",
@@ -34,294 +34,294 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "skillsManager",
-          "title": "Skills Manager",
+          "id": "skillsDeck",
+          "title": "Skills Deck",
           "icon": "media/sidebar.svg"
         }
       ]
     },
     "views": {
-      "skillsManager": [
+      "skillsDeck": [
         {
-          "id": "skillsManager.view",
+          "id": "skillsDeck.view",
           "name": "Skills"
         },
         {
-          "id": "skillsManager.details",
+          "id": "skillsDeck.details",
           "name": "Details"
         }
       ]
     },
     "commands": [
       {
-        "command": "skillsManager.addSkill",
+        "command": "skillsDeck.addSkill",
         "title": "Add Skill",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(add)"
       },
       {
-        "command": "skillsManager.removeSkill",
+        "command": "skillsDeck.removeSkill",
         "title": "Remove from List",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(close)"
       },
       {
-        "command": "skillsManager.removeRepository",
+        "command": "skillsDeck.removeRepository",
         "title": "Delete Repository and Skills",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(trash)"
       },
       {
-        "command": "skillsManager.updateRepository",
+        "command": "skillsDeck.updateRepository",
         "title": "Update Repository",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(sync)"
       },
       {
-        "command": "skillsManager.editSkill",
+        "command": "skillsDeck.editSkill",
         "title": "Edit Skill",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.refresh",
+        "command": "skillsDeck.refresh",
         "title": "Refresh",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(refresh)"
       },
       {
-        "command": "skillsManager.search",
+        "command": "skillsDeck.search",
         "title": "Search Skills",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(search)"
       },
       {
-        "command": "skillsManager.filterStatus",
+        "command": "skillsDeck.filterStatus",
         "title": "Filter by Status",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(filter)"
       },
       {
-        "command": "skillsManager.groupByCategory",
+        "command": "skillsDeck.groupByCategory",
         "title": "Category (Default, custom)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(folder)"
       },
       {
-        "command": "skillsManager.groupByCategoryCurrent",
+        "command": "skillsDeck.groupByCategoryCurrent",
         "title": "✓ Category (Default, custom)",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.groupBySource",
+        "command": "skillsDeck.groupBySource",
         "title": "Source (GitHub, Local, Marketplace)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(symbol-namespace)"
       },
       {
-        "command": "skillsManager.groupBySourceCurrent",
+        "command": "skillsDeck.groupBySourceCurrent",
         "title": "✓ Source (GitHub, Local, Marketplace)",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.groupByStatus",
+        "command": "skillsDeck.groupByStatus",
         "title": "Status (Wanted, Unwanted, Diff)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(circle-filled)"
       },
       {
-        "command": "skillsManager.groupByStatusCurrent",
+        "command": "skillsDeck.groupByStatusCurrent",
         "title": "✓ Status (Wanted, Unwanted, Diff)",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.groupByScope",
+        "command": "skillsDeck.groupByScope",
         "title": "Scope (Global, Project)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(root-folder)"
       },
       {
-        "command": "skillsManager.groupByScopeCurrent",
+        "command": "skillsDeck.groupByScopeCurrent",
         "title": "✓ Scope (Global, Project)",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.groupByFlat",
+        "command": "skillsDeck.groupByFlat",
         "title": "Flat List (No grouping)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(list-flat)"
       },
       {
-        "command": "skillsManager.groupByFlatCurrent",
+        "command": "skillsDeck.groupByFlatCurrent",
         "title": "✓ Flat List (No grouping)",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.syncToData",
+        "command": "skillsDeck.syncToData",
         "title": "Sync to Data (Install State → List)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(arrow-down)"
       },
       {
-        "command": "skillsManager.syncFromData",
+        "command": "skillsDeck.syncFromData",
         "title": "Sync from Data (List → Install)",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(arrow-up)"
       },
       {
-        "command": "skillsManager.installSelected",
+        "command": "skillsDeck.installSelected",
         "title": "Install",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "skillsManager.uninstallSelected",
+        "command": "skillsDeck.uninstallSelected",
         "title": "Uninstall",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(trash)"
       },
       {
-        "command": "skillsManager.toggleWanted",
+        "command": "skillsDeck.toggleWanted",
         "title": "Toggle Wanted / Unwanted",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(arrow-swap)"
       },
       {
-        "command": "skillsManager.inlineWanted",
+        "command": "skillsDeck.inlineWanted",
         "title": "Wanted — Toggle to Unwanted",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "media/status-wanted.svg"
       },
       {
-        "command": "skillsManager.inlineUnwanted",
+        "command": "skillsDeck.inlineUnwanted",
         "title": "Unwanted — Toggle to Wanted",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "media/status-unwanted.svg"
       },
       {
-        "command": "skillsManager.inlineInstalled",
+        "command": "skillsDeck.inlineInstalled",
         "title": "Installed — Uninstall",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "media/status-installed.svg"
       },
       {
-        "command": "skillsManager.inlineMissing",
+        "command": "skillsDeck.inlineMissing",
         "title": "Not Installed — Install",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "media/status-missing.svg"
       },
       {
-        "command": "skillsManager.openSkillMd",
+        "command": "skillsDeck.openSkillMd",
         "title": "Open SKILL.md",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "skillsManager.previewSkillMd",
+        "command": "skillsDeck.previewSkillMd",
         "title": "Preview SKILL.md",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(eye)"
       },
       {
-        "command": "skillsManager.copyPath",
+        "command": "skillsDeck.copyPath",
         "title": "Copy Path",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       },
       {
-        "command": "skillsManager.openDataFile",
+        "command": "skillsDeck.openDataFile",
         "title": "Open data.json",
-        "category": "Skills Manager",
+        "category": "Skills Deck",
         "icon": "$(file-code)"
       },
       {
-        "command": "skillsManager.removeAllData",
+        "command": "skillsDeck.removeAllData",
         "title": "Remove All Data",
-        "category": "Skills Manager"
+        "category": "Skills Deck"
       }
     ],
     "submenus": [
       {
-        "id": "skillsManager.groupBy",
+        "id": "skillsDeck.groupBy",
         "label": "Group By",
         "icon": "$(group-by-ref-type)"
       }
     ],
     "menus": {
       "commandPalette": [
-        { "command": "skillsManager.removeSkill", "when": "false" },
-        { "command": "skillsManager.removeRepository", "when": "false" },
-        { "command": "skillsManager.updateRepository", "when": "false" },
-        { "command": "skillsManager.editSkill", "when": "false" },
-        { "command": "skillsManager.installSelected", "when": "false" },
-        { "command": "skillsManager.uninstallSelected", "when": "false" },
-        { "command": "skillsManager.toggleWanted", "when": "false" },
-        { "command": "skillsManager.inlineWanted", "when": "false" },
-        { "command": "skillsManager.inlineUnwanted", "when": "false" },
-        { "command": "skillsManager.inlineInstalled", "when": "false" },
-        { "command": "skillsManager.inlineMissing", "when": "false" },
-        { "command": "skillsManager.openSkillMd", "when": "false" },
-        { "command": "skillsManager.previewSkillMd", "when": "false" },
-        { "command": "skillsManager.copyPath", "when": "false" },
-        { "command": "skillsManager.groupByCategory", "when": "false" },
-        { "command": "skillsManager.groupByCategoryCurrent", "when": "false" },
-        { "command": "skillsManager.groupBySource", "when": "false" },
-        { "command": "skillsManager.groupBySourceCurrent", "when": "false" },
-        { "command": "skillsManager.groupByStatus", "when": "false" },
-        { "command": "skillsManager.groupByStatusCurrent", "when": "false" },
-        { "command": "skillsManager.groupByScope", "when": "false" },
-        { "command": "skillsManager.groupByScopeCurrent", "when": "false" },
-        { "command": "skillsManager.groupByFlat", "when": "false" },
-        { "command": "skillsManager.groupByFlatCurrent", "when": "false" }
+        { "command": "skillsDeck.removeSkill", "when": "false" },
+        { "command": "skillsDeck.removeRepository", "when": "false" },
+        { "command": "skillsDeck.updateRepository", "when": "false" },
+        { "command": "skillsDeck.editSkill", "when": "false" },
+        { "command": "skillsDeck.installSelected", "when": "false" },
+        { "command": "skillsDeck.uninstallSelected", "when": "false" },
+        { "command": "skillsDeck.toggleWanted", "when": "false" },
+        { "command": "skillsDeck.inlineWanted", "when": "false" },
+        { "command": "skillsDeck.inlineUnwanted", "when": "false" },
+        { "command": "skillsDeck.inlineInstalled", "when": "false" },
+        { "command": "skillsDeck.inlineMissing", "when": "false" },
+        { "command": "skillsDeck.openSkillMd", "when": "false" },
+        { "command": "skillsDeck.previewSkillMd", "when": "false" },
+        { "command": "skillsDeck.copyPath", "when": "false" },
+        { "command": "skillsDeck.groupByCategory", "when": "false" },
+        { "command": "skillsDeck.groupByCategoryCurrent", "when": "false" },
+        { "command": "skillsDeck.groupBySource", "when": "false" },
+        { "command": "skillsDeck.groupBySourceCurrent", "when": "false" },
+        { "command": "skillsDeck.groupByStatus", "when": "false" },
+        { "command": "skillsDeck.groupByStatusCurrent", "when": "false" },
+        { "command": "skillsDeck.groupByScope", "when": "false" },
+        { "command": "skillsDeck.groupByScopeCurrent", "when": "false" },
+        { "command": "skillsDeck.groupByFlat", "when": "false" },
+        { "command": "skillsDeck.groupByFlatCurrent", "when": "false" }
       ],
       "view/title": [
-        { "command": "skillsManager.addSkill", "when": "view == skillsManager.view", "group": "navigation@1" },
-        { "submenu": "skillsManager.groupBy", "when": "view == skillsManager.view", "group": "navigation@2" },
-        { "command": "skillsManager.search", "when": "view == skillsManager.view", "group": "navigation@3" },
-        { "command": "skillsManager.refresh", "when": "view == skillsManager.view", "group": "navigation@4" },
-        { "command": "skillsManager.syncToData", "when": "view == skillsManager.view", "group": "sync@1" },
-        { "command": "skillsManager.syncFromData", "when": "view == skillsManager.view", "group": "sync@2" },
-        { "command": "skillsManager.openDataFile", "when": "view == skillsManager.view", "group": "settings@1" }
+        { "command": "skillsDeck.addSkill", "when": "view == skillsDeck.view", "group": "navigation@1" },
+        { "submenu": "skillsDeck.groupBy", "when": "view == skillsDeck.view", "group": "navigation@2" },
+        { "command": "skillsDeck.search", "when": "view == skillsDeck.view", "group": "navigation@3" },
+        { "command": "skillsDeck.refresh", "when": "view == skillsDeck.view", "group": "navigation@4" },
+        { "command": "skillsDeck.syncToData", "when": "view == skillsDeck.view", "group": "sync@1" },
+        { "command": "skillsDeck.syncFromData", "when": "view == skillsDeck.view", "group": "sync@2" },
+        { "command": "skillsDeck.openDataFile", "when": "view == skillsDeck.view", "group": "settings@1" }
       ],
-      "skillsManager.groupBy": [
-        { "command": "skillsManager.groupByCategory", "when": "skillsManager.groupBy != 'category'", "group": "1_group@1" },
-        { "command": "skillsManager.groupByCategoryCurrent", "when": "skillsManager.groupBy == 'category'", "group": "1_group@1" },
-        { "command": "skillsManager.groupBySource", "when": "skillsManager.groupBy != 'source'", "group": "1_group@2" },
-        { "command": "skillsManager.groupBySourceCurrent", "when": "skillsManager.groupBy == 'source'", "group": "1_group@2" },
-        { "command": "skillsManager.groupByStatus", "when": "skillsManager.groupBy != 'status'", "group": "1_group@3" },
-        { "command": "skillsManager.groupByStatusCurrent", "when": "skillsManager.groupBy == 'status'", "group": "1_group@3" },
-        { "command": "skillsManager.groupByScope", "when": "skillsManager.groupBy != 'scope'", "group": "1_group@4" },
-        { "command": "skillsManager.groupByScopeCurrent", "when": "skillsManager.groupBy == 'scope'", "group": "1_group@4" },
-        { "command": "skillsManager.groupByFlat", "when": "skillsManager.groupBy != 'flat'", "group": "1_group@5" },
-        { "command": "skillsManager.groupByFlatCurrent", "when": "skillsManager.groupBy == 'flat'", "group": "1_group@5" }
+      "skillsDeck.groupBy": [
+        { "command": "skillsDeck.groupByCategory", "when": "skillsDeck.groupBy != 'category'", "group": "1_group@1" },
+        { "command": "skillsDeck.groupByCategoryCurrent", "when": "skillsDeck.groupBy == 'category'", "group": "1_group@1" },
+        { "command": "skillsDeck.groupBySource", "when": "skillsDeck.groupBy != 'source'", "group": "1_group@2" },
+        { "command": "skillsDeck.groupBySourceCurrent", "when": "skillsDeck.groupBy == 'source'", "group": "1_group@2" },
+        { "command": "skillsDeck.groupByStatus", "when": "skillsDeck.groupBy != 'status'", "group": "1_group@3" },
+        { "command": "skillsDeck.groupByStatusCurrent", "when": "skillsDeck.groupBy == 'status'", "group": "1_group@3" },
+        { "command": "skillsDeck.groupByScope", "when": "skillsDeck.groupBy != 'scope'", "group": "1_group@4" },
+        { "command": "skillsDeck.groupByScopeCurrent", "when": "skillsDeck.groupBy == 'scope'", "group": "1_group@4" },
+        { "command": "skillsDeck.groupByFlat", "when": "skillsDeck.groupBy != 'flat'", "group": "1_group@5" },
+        { "command": "skillsDeck.groupByFlatCurrent", "when": "skillsDeck.groupBy == 'flat'", "group": "1_group@5" }
       ],
       "view/item/context": [
-        { "command": "skillsManager.inlineWanted", "when": "view == skillsManager.view && viewItem =~ /\\.wanted\\./", "group": "inline@1" },
-        { "command": "skillsManager.inlineUnwanted", "when": "view == skillsManager.view && viewItem =~ /\\.unwanted\\./", "group": "inline@1" },
-        { "command": "skillsManager.inlineInstalled", "when": "view == skillsManager.view && viewItem =~ /\\.installed$/", "group": "inline@2" },
-        { "command": "skillsManager.inlineMissing", "when": "view == skillsManager.view && viewItem =~ /\\.missing$/", "group": "inline@2" },
-        { "command": "skillsManager.openSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@1" },
-        { "command": "skillsManager.previewSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@2" },
-        { "command": "skillsManager.editSkill", "when": "view == skillsManager.view && viewItem =~ /^declaredSkill\\./", "group": "2_edit@1" },
-        { "command": "skillsManager.copyPath", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "3_info@1" },
-        { "command": "skillsManager.installSelected", "when": "view == skillsManager.view && viewItem =~ /\\.missing$/", "group": "4_manage@1" },
-        { "command": "skillsManager.uninstallSelected", "when": "view == skillsManager.view && viewItem =~ /\\.installed$/", "group": "4_manage@1" },
-        { "command": "skillsManager.toggleWanted", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "4_manage@2" },
-        { "command": "skillsManager.removeSkill", "when": "view == skillsManager.view && viewItem =~ /^declaredSkill\\./", "group": "4_manage@3" },
-        { "command": "skillsManager.updateRepository", "when": "view == skillsManager.view && viewItem == repository", "group": "4_manage@1" },
-        { "command": "skillsManager.removeRepository", "when": "view == skillsManager.view && viewItem == repository", "group": "4_manage@3" }
+        { "command": "skillsDeck.inlineWanted", "when": "view == skillsDeck.view && viewItem =~ /\\.wanted\\./", "group": "inline@1" },
+        { "command": "skillsDeck.inlineUnwanted", "when": "view == skillsDeck.view && viewItem =~ /\\.unwanted\\./", "group": "inline@1" },
+        { "command": "skillsDeck.inlineInstalled", "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/", "group": "inline@2" },
+        { "command": "skillsDeck.inlineMissing", "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/", "group": "inline@2" },
+        { "command": "skillsDeck.openSkillMd", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "1_open@1" },
+        { "command": "skillsDeck.previewSkillMd", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "1_open@2" },
+        { "command": "skillsDeck.editSkill", "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./", "group": "2_edit@1" },
+        { "command": "skillsDeck.copyPath", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "3_info@1" },
+        { "command": "skillsDeck.installSelected", "when": "view == skillsDeck.view && viewItem =~ /\\.missing$/", "group": "4_manage@1" },
+        { "command": "skillsDeck.uninstallSelected", "when": "view == skillsDeck.view && viewItem =~ /\\.installed$/", "group": "4_manage@1" },
+        { "command": "skillsDeck.toggleWanted", "when": "view == skillsDeck.view && viewItem =~ /Skill/", "group": "4_manage@2" },
+        { "command": "skillsDeck.removeSkill", "when": "view == skillsDeck.view && viewItem =~ /^declaredSkill\\./", "group": "4_manage@3" },
+        { "command": "skillsDeck.updateRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@1" },
+        { "command": "skillsDeck.removeRepository", "when": "view == skillsDeck.view && viewItem == repository", "group": "4_manage@3" }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "skillsManager.view",
-        "contents": "No skills declared yet.\n\nDeclare what skills you want, then reconcile against what's actually installed across your AI agents (Claude Code, Cursor, Windsurf, Copilot, Codex, …).\n\n[Add Skill](command:skillsManager.addSkill)\n[Sync Installed → List](command:skillsManager.syncToData)\n[Open data.json](command:skillsManager.openDataFile)",
-        "when": "skillsManager.noSkills"
+        "view": "skillsDeck.view",
+        "contents": "No skills declared yet.\n\nDeclare what skills you want, then reconcile against what's actually installed across your AI agents (Claude Code, Cursor, Windsurf, Copilot, Codex, …).\n\n[Add Skill](command:skillsDeck.addSkill)\n[Sync Installed → List](command:skillsDeck.syncToData)\n[Open data.json](command:skillsDeck.openDataFile)",
+        "when": "skillsDeck.noSkills"
       }
     ],
     "configuration": [
       {
-        "title": "Skills Manager",
+        "title": "Skills Deck",
         "properties": {
-          "skills-manager.activeAgents": {
+          "skills-deck.activeAgents": {
             "type": "array",
             "default": [
               "canonical",
@@ -356,7 +356,7 @@
             "scope": "window",
             "markdownDescription": "Which AI agents to scan for installed skills. Agent IDs: `canonical` (skills.sh), `claude-code`, `cursor`, `windsurf`, `github-copilot`, `codex`, `roo`, `gemini-cli`, `trae`, `kiro`, `continue`."
           },
-          "skills-manager.defaultScope": {
+          "skills-deck.defaultScope": {
             "type": "string",
             "enum": ["global", "project", "ask"],
             "enumDescriptions": [
@@ -367,13 +367,13 @@
             "default": "global",
             "scope": "window"
           },
-          "skills-manager.confirmBeforeSync": {
+          "skills-deck.confirmBeforeSync": {
             "type": "boolean",
             "default": true,
             "scope": "window",
             "markdownDescription": "Show a confirmation dialog before installing/uninstalling skills via sync."
           },
-          "skills-manager.autoRefreshOnFocus": {
+          "skills-deck.autoRefreshOnFocus": {
             "type": "boolean",
             "default": true,
             "scope": "window",

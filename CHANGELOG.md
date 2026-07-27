@@ -19,10 +19,12 @@ All notable changes to this project are documented in this file.
 - GitHub owner avatars for repositories and child skills.
 - Global and project scope scanning with lock-file source recovery.
 - Schema migration for existing `data.json` files.
+- Legacy global-storage migration from the pre-Marketplace extension ID.
 - Apache License 2.0 and Marketplace icon.
 
 ### Changed
 
+- Renamed the product and extension namespace to Skills Deck.
 - Simplified tree labels to keep detailed metadata in the Details view.
 - Ignored hidden runtime-owned skill directories such as `.system`.
 - Prompted for install IDs only when collision resolution is required.

@@ -8,7 +8,7 @@
 
 ## Product Intent
 
-Skills Manager is a declarative VS Code manager for Agent Skills. The persisted
+Skills Deck is a declarative VS Code manager for Agent Skills. The persisted
 list represents desired state; the scanner observes installed state; reconcile
 derives the difference at runtime.
 
@@ -95,6 +95,7 @@ Do not persist runtime installation state. Derive it by crossing effective
 
 - `src/types.ts`: persisted and runtime domain types.
 - `src/store.ts`: normalized, migrated, file-backed state.
+- `src/config.ts`: current settings with legacy namespace fallback.
 - `src/scanner.ts`: global/project discovery and lock-file source recovery.
 - `src/reconcile.ts`: inheritance and desired-versus-installed derivation.
 - `src/provider.ts`: grouped repository/skill TreeView rendering.

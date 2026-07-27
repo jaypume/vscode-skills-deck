@@ -25,6 +25,7 @@ import { SkillNode, SkillsTreeProvider } from './provider';
 import { installSkills, uninstallSkills, updateSkills } from './installer';
 import { reconcile, resolveDeclaredSkill } from './reconcile';
 import { discoverRepositorySkills } from './repositoryDiscovery';
+import { getConfig } from './config';
 
 export interface CommandDeps {
   scanner: SkillScanner;
@@ -48,7 +49,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   const push = (command: string, fn: (...args: any[]) => unknown) =>
     subs.push(vscode.commands.registerCommand(command, fn));
 
-  push('skillsManager.addSkill', async () => {
+  push('skillsDeck.addSkill', async () => {
     const picked = await vscode.window.showQuickPick(
       [
         { label: '$(github) GitHub', type: 'GitHub' as SourceTypeLabel, detail: '从 GitHub 仓库选择并安装 skills' },
@@ -154,7 +155,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     }
   });
 
-  push('skillsManager.removeSkill', async (
+  push('skillsDeck.removeSkill', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => {
@@ -174,7 +175,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.updateRepository', async (node?: SkillNode) => {
+  push('skillsDeck.updateRepository', async (node?: SkillNode) => {
     const repository = node?.repository;
     const scope = node?.repositorySkills?.[0]?.scope;
     if (!repository || !scope) { return; }
@@ -265,7 +266,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     }
   });
 
-  push('skillsManager.removeRepository', async (node?: SkillNode) => {
+  push('skillsDeck.removeRepository', async (node?: SkillNode) => {
     const repository = node?.repository;
     if (!repository) { return; }
     const state = store.read();
@@ -287,7 +288,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.editSkill', async (node?: SkillNode) => {
+  push('skillsDeck.editSkill', async (node?: SkillNode) => {
     const current = node?.skill;
     if (!current || current.extra) { return; }
     const state = store.read();
@@ -312,7 +313,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.toggleWanted', async (
+  push('skillsDeck.toggleWanted', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => {
@@ -372,9 +373,9 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.refresh', async () => { await rescan(); });
+  push('skillsDeck.refresh', async () => { await rescan(); });
 
-  push('skillsManager.search', async () => {
+  push('skillsDeck.search', async () => {
     const state = store.read();
     const decorated = reconcile(state.skills, state.repositories, await deps.scanner.scan());
     const picker = vscode.window.createQuickPick<{ id: string; label: string; detail: string }>();
@@ -400,7 +401,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     picker.show();
   });
 
-  push('skillsManager.filterStatus', async () => {
+  push('skillsDeck.filterStatus', async () => {
     const picked = await vscode.window.showQuickPick(
       [
         { label: 'All', value: 'all' as StatusFilter },
@@ -417,21 +418,21 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   const setGroup = (group: GroupDimension) => {
     store.update('groupBy', group);
-    vscode.commands.executeCommand('setContext', 'skillsManager.groupBy', group);
+    vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', group);
     provider.refresh();
   };
-  push('skillsManager.groupByCategory', () => setGroup('category'));
-  push('skillsManager.groupByCategoryCurrent', () => setGroup('category'));
-  push('skillsManager.groupBySource', () => setGroup('source'));
-  push('skillsManager.groupBySourceCurrent', () => setGroup('source'));
-  push('skillsManager.groupByStatus', () => setGroup('status'));
-  push('skillsManager.groupByStatusCurrent', () => setGroup('status'));
-  push('skillsManager.groupByScope', () => setGroup('scope'));
-  push('skillsManager.groupByScopeCurrent', () => setGroup('scope'));
-  push('skillsManager.groupByFlat', () => setGroup('flat'));
-  push('skillsManager.groupByFlatCurrent', () => setGroup('flat'));
+  push('skillsDeck.groupByCategory', () => setGroup('category'));
+  push('skillsDeck.groupByCategoryCurrent', () => setGroup('category'));
+  push('skillsDeck.groupBySource', () => setGroup('source'));
+  push('skillsDeck.groupBySourceCurrent', () => setGroup('source'));
+  push('skillsDeck.groupByStatus', () => setGroup('status'));
+  push('skillsDeck.groupByStatusCurrent', () => setGroup('status'));
+  push('skillsDeck.groupByScope', () => setGroup('scope'));
+  push('skillsDeck.groupByScopeCurrent', () => setGroup('scope'));
+  push('skillsDeck.groupByFlat', () => setGroup('flat'));
+  push('skillsDeck.groupByFlatCurrent', () => setGroup('flat'));
 
-  push('skillsManager.installSelected', async (
+  push('skillsDeck.installSelected', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => {
@@ -458,7 +459,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.uninstallSelected', async (
+  push('skillsDeck.uninstallSelected', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => {
@@ -488,12 +489,12 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => vscode.commands.executeCommand(target, node, selection);
-  push('skillsManager.inlineWanted', forward('skillsManager.toggleWanted'));
-  push('skillsManager.inlineUnwanted', forward('skillsManager.toggleWanted'));
-  push('skillsManager.inlineInstalled', forward('skillsManager.uninstallSelected'));
-  push('skillsManager.inlineMissing', forward('skillsManager.installSelected'));
+  push('skillsDeck.inlineWanted', forward('skillsDeck.toggleWanted'));
+  push('skillsDeck.inlineUnwanted', forward('skillsDeck.toggleWanted'));
+  push('skillsDeck.inlineInstalled', forward('skillsDeck.uninstallSelected'));
+  push('skillsDeck.inlineMissing', forward('skillsDeck.installSelected'));
 
-  push('skillsManager.syncToData', async () => {
+  push('skillsDeck.syncToData', async () => {
     const scan = await deps.scanner.scan();
     const state = store.read();
     const current = reconcile(state.skills, state.repositories, scan);
@@ -544,7 +545,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     vscode.window.showInformationMessage(`Synced ${declarations.length} installed skill(s) into list.`);
   });
 
-  push('skillsManager.syncFromData', async () => {
+  push('skillsDeck.syncFromData', async () => {
     const scan = await deps.scanner.scan();
     const state = store.read();
     const decorated = reconcile(state.skills, state.repositories, scan);
@@ -564,7 +565,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     await rescan();
   });
 
-  push('skillsManager.openSkillMd', async (node?: SkillNode) => {
+  push('skillsDeck.openSkillMd', async (node?: SkillNode) => {
     const installedPath = node?.skill?.installedPath;
     if (installedPath) {
       await vscode.commands.executeCommand(
@@ -573,7 +574,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       );
     }
   });
-  push('skillsManager.previewSkillMd', async (node?: SkillNode) => {
+  push('skillsDeck.previewSkillMd', async (node?: SkillNode) => {
     const installedPath = node?.skill?.installedPath;
     if (installedPath) {
       await vscode.commands.executeCommand(
@@ -582,7 +583,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       );
     }
   });
-  push('skillsManager.copyPath', async (
+  push('skillsDeck.copyPath', async (
     node?: SkillNode,
     selection?: readonly SkillNode[],
   ) => {
@@ -597,10 +598,10 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       paths.length === 1 ? '路径已复制' : `已复制 ${paths.length} 个路径`,
     );
   });
-  push('skillsManager.openDataFile', async () => {
+  push('skillsDeck.openDataFile', async () => {
     await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(store.dataFilePath()));
   });
-  push('skillsManager.removeAllData', async () => {
+  push('skillsDeck.removeAllData', async () => {
     const action = await vscode.window.showWarningMessage(
       '删除全部声明数据（data.json）？已安装的 skill 不会被卸载。',
       '删除',
@@ -767,8 +768,7 @@ async function collectSourceInput(type: SourceTypeLabel): Promise<SourceInput | 
 }
 
 async function pickScope(): Promise<SkillScope | undefined> {
-  const preference = vscode.workspace.getConfiguration('skills-manager')
-    .get<string>('defaultScope', 'global');
+  const preference = getConfig<string>('defaultScope', 'global');
   if (preference === 'global' || preference === 'project') { return preference; }
   const picked = await vscode.window.showQuickPick(
     [

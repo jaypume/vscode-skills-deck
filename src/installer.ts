@@ -14,6 +14,7 @@ import * as vscode from 'vscode';
 import { ResolvedSkill, SkillScope } from './types';
 import { classifySource, localPath, npxAddArg } from './source';
 import { KNOWN_AGENTS, KnownAgent } from './known-agents';
+import { getConfig } from './config';
 
 const execFileAsync = promisify(execFile);
 
@@ -165,7 +166,7 @@ function uniqueSkills(skills: ResolvedSkill[]): ResolvedSkill[] {
 }
 
 function getActiveAgents() {
-  const ids = vscode.workspace.getConfiguration('skills-manager').get<string[]>('activeAgents');
+  const ids = getConfig<string[]>('activeAgents', []);
   if (!ids || ids.length === 0) { return KNOWN_AGENTS; }
   const set = new Set(ids);
   return KNOWN_AGENTS.filter(agent => set.has(agent.id));
@@ -318,7 +319,7 @@ function writeFailures(operation: Operation, failures: OperationFailure[]): void
 }
 
 function getOutputChannel(): vscode.OutputChannel {
-  outputChannel ??= vscode.window.createOutputChannel('Skills Manager');
+  outputChannel ??= vscode.window.createOutputChannel('Skills Deck');
   return outputChannel;
 }
 
