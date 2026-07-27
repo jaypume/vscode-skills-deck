@@ -10,6 +10,8 @@
 import * as vscode from 'vscode';
 import * as store from './store';
 import * as agentStore from './agentStore';
+import * as viewState from './viewState';
+import * as avatarCache from './avatarCache';
 import { SkillScanner } from './scanner';
 import { SkillsTreeProvider, SkillNode } from './provider';
 import { DetailsTreeProvider } from './detailsView';
@@ -24,6 +26,7 @@ import { getConfig } from './config';
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   store.init(context);
   agentStore.init(context);
+  avatarCache.init(context);
 
   const scanner = new SkillScanner();
   const provider = new SkillsTreeProvider();
@@ -148,11 +151,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ));
 
   // Initial groupBy context + first scan.
-  vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', store.get('groupBy'));
+  vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', viewState.get('groupBy'));
   vscode.commands.executeCommand(
     'setContext',
     'skillsDeck.groupRepositories',
-    store.get('groupRepositories'),
+    viewState.get('groupRepositories'),
   );
 
   rebuildWatchers();
@@ -191,7 +194,6 @@ function reconcileStoredRepositories(
   scan: { globalSkills: Array<{ folderName: string; source?: string }>; projectSkills: Array<{ folderName: string; source?: string }> },
 ): void {
   const state = store.read();
-  const installedByRepository = new Map<string, Set<string>>();
   let changed = false;
   for (const [scope, skills] of [
     ['global', scan.globalSkills],
@@ -200,10 +202,6 @@ function reconcileStoredRepositories(
     for (const skill of skills) {
       const source = skill.source ?? '';
       const repoId = repositoryId(source, `${scope}:${skill.folderName}`);
-      const key = `${scope}:${repoId}`;
-      const ids = installedByRepository.get(key) ?? new Set<string>();
-      ids.add(skill.folderName);
-      installedByRepository.set(key, ids);
 
       if (!source) { continue; }
       let repository = state.repositories.find(repo => repo.repoId === repoId);
@@ -241,15 +239,6 @@ function reconcileStoredRepositories(
       declaration.wanted = wanted === (repository.wanted ?? true) ? undefined : wanted;
       changed = true;
     }
-  }
-  const filtered = state.skills.filter(skill => {
-    if (!skill.legacyRepositoryPlaceholder) { return true; }
-    const installed = installedByRepository.get(`${skill.scope}:${skill.repoId}`);
-    return !installed || installed.size <= 1 || installed.has(skill.id);
-  });
-  if (filtered.length !== state.skills.length) {
-    state.skills = filtered;
-    changed = true;
   }
   if (changed) { store.write(state); }
 }

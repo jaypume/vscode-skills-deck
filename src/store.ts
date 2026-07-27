@@ -16,19 +16,17 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DeclaredSkill, SkillRepository, SkillsState } from './types';
 import { repositoryId, repositoryName } from './source';
+import { defaults as defaultAgents, normalizeAgents } from './agentStore';
 
 const DATA_FILE = 'data.json';
-const LEGACY_EXTENSION_ID = 'pujie.skills-manager';
+const LEGACY_AGENTS_FILE = 'agents.json';
 
 export const DEFAULTS: SkillsState = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   repositories: [],
   skills: [],
   categories: ['Default'],
-  groupBy: 'category',
-  groupRepositories: true,
-  statusFilter: 'all',
-  sortingOption: 'A-Z',
+  agents: defaultAgents(),
 };
 
 let file: string | null = null;
@@ -36,25 +34,8 @@ let file: string | null = null;
 /** Initialize the store path. Call once in activate(). */
 export function init(context: vscode.ExtensionContext): void {
   file = path.join(context.globalStorageUri.fsPath, DATA_FILE);
-  migrateLegacyData(context);
   migrateStoredState();
-}
-
-function migrateLegacyData(context: vscode.ExtensionContext): void {
-  const current = getStatePath();
-  if (fs.existsSync(current)) { return; }
-  const legacy = path.join(
-    path.dirname(context.globalStorageUri.fsPath),
-    LEGACY_EXTENSION_ID,
-    DATA_FILE,
-  );
-  if (!fs.existsSync(legacy)) { return; }
-  try {
-    fs.mkdirSync(path.dirname(current), { recursive: true });
-    fs.copyFileSync(legacy, current, fs.constants.COPYFILE_EXCL);
-  } catch (error) {
-    console.warn('[skills-deck] migrate legacy data failed:', error);
-  }
+  migrateAgentsJson(context);
 }
 
 function getStatePath(): string {
@@ -86,19 +67,31 @@ export function write(state: SkillsState): void {
   }
 }
 
+/**
+ * Recursively sort object keys for stable, readable output.
+ * Scalars first (alphabetical), then arrays/objects (alphabetical) — so heavy
+ * nested fields like `availableSkills` sink to the end of their object while
+ * scalar metadata stays on top.
+ */
 function sortKeys<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map(sortKeys) as unknown as T;
   }
   if (value && typeof value === 'object') {
-    return Object.keys(value)
-      .sort((a, b) => a.localeCompare(b))
-      .reduce((sorted: Record<string, unknown>, key) => {
-        sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-        return sorted;
-      }, {}) as unknown as T;
+    const entries = Object.entries(value as Record<string, unknown>);
+    entries.sort(([ak, av], [bk, bv]) => {
+      const aComplex = isComplex(av);
+      const bComplex = isComplex(bv);
+      if (aComplex !== bComplex) { return aComplex ? 1 : -1; }
+      return ak.localeCompare(bk);
+    });
+    return Object.fromEntries(entries.map(([k, v]) => [k, sortKeys(v)])) as unknown as T;
   }
   return value;
+}
+
+function isComplex(value: unknown): boolean {
+  return Array.isArray(value) || (value !== null && typeof value === 'object');
 }
 
 /** get/update façade, mirroring vscode.WorkspaceConfiguration ergonomics. */
@@ -178,21 +171,13 @@ export function normalizeState(o: Partial<SkillsState> | null): SkillsState {
         dateAdded: item.dateAdded || new Date().toISOString(),
         scope,
         note: item.note,
-        legacyRepositoryPlaceholder: item.legacyRepositoryPlaceholder
-          ?? (raw.schemaVersion !== 2
-            && item.id === repositoryName(repoId, item.name || item.id)),
       });
     }
   }
   out.repositories = Array.from(repositories.values());
 
   if (Array.isArray(raw.categories) && raw.categories.length > 0) { out.categories = raw.categories; }
-  if (isGroupBy(raw.groupBy)) { out.groupBy = raw.groupBy; }
-  if (typeof raw.groupRepositories === 'boolean') {
-    out.groupRepositories = raw.groupRepositories;
-  }
-  if (isStatusFilter(raw.statusFilter)) { out.statusFilter = raw.statusFilter; }
-  if (isSorting(raw.sortingOption)) { out.sortingOption = raw.sortingOption; }
+  out.agents = normalizeAgents(raw.agents);
   return out;
 }
 
@@ -201,19 +186,32 @@ function migrateStoredState(): void {
   if (!fs.existsSync(p)) { return; }
   try {
     const raw = JSON.parse(fs.readFileSync(p, 'utf8')) as Partial<SkillsState>;
-    if (raw.schemaVersion === 2 && Array.isArray(raw.repositories)) { return; }
+    if (raw.schemaVersion === 3 && Array.isArray(raw.repositories)) { return; }
     write(normalizeState(raw));
   } catch (e) {
     console.warn('[skills-deck] migrate store failed:', e);
   }
 }
 
-function isGroupBy(v: unknown): v is SkillsState['groupBy'] {
-  return v === 'category' || v === 'source' || v === 'status' || v === 'scope' || v === 'flat';
-}
-function isStatusFilter(v: unknown): v is SkillsState['statusFilter'] {
-  return v === 'all' || v === 'installed' || v === 'unwanted' || v === 'diff';
-}
-function isSorting(v: unknown): v is SkillsState['sortingOption'] {
-  return v === 'A-Z' || v === 'Z-A' || v === 'New-Old' || v === 'Old-New';
+/** Merge a legacy standalone agents.json into data.json, then remove it. */
+function migrateAgentsJson(context: vscode.ExtensionContext): void {
+  const legacy = path.join(context.globalStorageUri.fsPath, LEGACY_AGENTS_FILE);
+  if (!fs.existsSync(legacy)) { return; }
+  try {
+    const raw = JSON.parse(fs.readFileSync(legacy, 'utf8')) as Partial<{
+      setupCompleted?: boolean;
+      preferences?: unknown;
+      customAgents?: unknown;
+    }>;
+    const state = read();
+    state.agents = normalizeAgents({
+      setupCompleted: raw.setupCompleted,
+      preferences: raw.preferences as never,
+      customAgents: raw.customAgents as never,
+    });
+    write(state);
+    fs.unlinkSync(legacy);
+  } catch (e) {
+    console.warn('[skills-deck] migrate agents.json failed:', e);
+  }
 }

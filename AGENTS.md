@@ -68,14 +68,20 @@ skill 未提供覆盖值时继承仓库的 `source`、`category` 和 `wanted`；
 - 本地 source 使用 symlink 管理。
 - GitHub 添加流程使用 `skills add --list` 发现仓库 skill，并通过多选 QuickPick 选择。
 - 尽可能从全局和 workspace 的 skills lock 文件恢复仓库 source 元数据。
-- 保持 schema migration 和手工编辑的不完整 `data.json` 向后兼容。
+- `data.json` 是唯一持久化文件（`schemaVersion: 3`），承载 skills / repositories / categories / agents。
+  视图状态（`groupBy` / `groupRepositories` / `statusFilter` / `sortingOption`）**只存内存**
+  （`src/viewState.ts`），不落盘、每次启动重置为默认；只有可移植的声明数据才写入 `data.json`。
+- 写盘时按键排序保证稳定可读：同一对象内**标量在前、数组/对象在后**，同组内字典序，
+  让 `availableSkills` 这类重组件字段沉到对象末尾。
+- 对手工编辑或字段缺失的 `data.json` 仍做防御性归一化（`normalizeState`），但不保留旧版本兼容。
 
 ## 架构边界
 
 - `src/types.ts`：持久化与运行时领域类型。
-- `src/store.ts`：规范化、迁移和文件持久化状态。
-- `src/agentStore.ts`：机器级 Agent 偏好和 custom Agent 持久化。
-- `src/config.ts`：当前设置及旧 namespace fallback。
+- `src/store.ts`：规范化、迁移和 `data.json` 持久化（唯一落盘文件）。
+- `src/agentStore.ts`：Agent 偏好的薄封装，读写 `data.json` 的 `agents` 字段。
+- `src/viewState.ts`：纯内存视图状态（分组/过滤/排序），不落盘。
+- `src/config.ts`：读取 `skills-deck` 设置。
 - `src/known-agents.ts`：内置 Agent registry、路径解析和运行时 Agent 合并。
 - `src/scanner.ts`：global/project 扫描与 lock source 恢复。
 - `src/reconcile.ts`：继承和期望状态/安装状态差异计算。
@@ -117,3 +123,11 @@ git diff --check
   必须保持足够分辨率的正方形 PNG。
 - commit subject 使用 Conventional Commits。
 - 未经用户明确要求，不 push、tag 或 publish。
+
+## 调试（F5）
+
+- `launch.json` **不要**配 `preLaunchTask`：本环境下 npm/shell 任务进程退出信号会丢失，
+  导致 VSCode 卡在 "Waiting for preLaunchTask" 久久无法启动调试。
+- 改由开发者手动保证 `dist/` 最新（`npm run build`），F5 直起 extensionHost。
+- `args` 带 `--new-window` 让调试宿主始终在新窗口启动，不影响当前工作区。
+- 改动后需重新 `npm run build` + 在调试宿主里 `Developer: Reload Window` 生效。

@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] - 2026-07-28
+
+### Changed
+
+- Merged the standalone `agents.json` into `data.json` (`schemaVersion` 3). On
+  first launch the legacy `agents.json` is folded into the new `agents` field
+  and removed; a single `data.json` is now the complete portable state.
+- Moved view state (`groupBy`, `groupRepositories`, `statusFilter`,
+  `sortingOption`) out of `data.json` into in-memory state — only portable
+  declared data is persisted; UI preferences reset each session.
+- Dropped backward-compatibility scaffolding (legacy extension-id data copy,
+  v1→v2 inline upgrade, `legacyRepositoryPlaceholder`, legacy `skills-manager`
+  config section, and the `activeAgents` setup hint). Hand-edited or partial
+  data files are still normalized defensively.
+- Sorted `data.json` keys on write: scalars first (alphabetical), then
+  arrays/objects, so heavy fields like `availableSkills` sink to the end.
+
+### Added
+
+- Local on-disk cache for GitHub owner avatars — tree icons load from disk
+  after the first fetch instead of re-hitting `github.com` on every refresh.
+
 ## [1.1.0] - 2026-07-27
 
 ### Added

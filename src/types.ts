@@ -49,8 +49,16 @@ export interface CustomAgent {
   enabled: boolean;
 }
 
+/** @deprecated kept for reading legacy `agents.json` during migration. */
 export interface AgentsState {
   schemaVersion: 1;
+  setupCompleted: boolean;
+  preferences: AgentPreference[];
+  customAgents: CustomAgent[];
+}
+
+/** Agent payload merged into `SkillsState.agents` (no own schemaVersion). */
+export interface AgentsPayload {
   setupCompleted: boolean;
   preferences: AgentPreference[];
   customAgents: CustomAgent[];
@@ -127,20 +135,15 @@ export interface DeclaredSkill {
   dateAdded: string;
   scope: SkillScope;
   note?: string;
-  /** One-time marker for v1 records that represented a repository as a skill. */
-  legacyRepositoryPlaceholder?: boolean;
 }
 
-/** Top-level persisted state. Mirrors extensions-bookmark store DEFAULTS. */
+/** Top-level persisted state. Single source of truth (data.json). */
 export interface SkillsState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   repositories: SkillRepository[];
   skills: DeclaredSkill[];
   categories: string[];
-  groupBy: GroupDimension;
-  groupRepositories: boolean;
-  statusFilter: StatusFilter;
-  sortingOption: SortingOption;
+  agents: AgentsPayload;
 }
 
 /**

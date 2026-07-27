@@ -21,6 +21,8 @@ import {
 } from './types';
 import { reconcile, isDiffStatus } from './reconcile';
 import { read } from './store';
+import * as viewState from './viewState';
+import * as avatarCache from './avatarCache';
 import { sortSkills, statusRank, STATUS_VISUALS } from './visuals';
 import { parseSource } from './source';
 
@@ -75,6 +77,12 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   };
   private selectionId: string | undefined;
 
+  constructor() {
+    // Refresh once when a GitHub avatar finishes downloading in the background,
+    // so a placeholder icon is swapped for the real avatar.
+    avatarCache.onReady(() => this.refresh());
+  }
+
   setScan(scan: ScanResult): void {
     this.scan = scan;
     this.refresh();
@@ -99,8 +107,8 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     const state = read();
     const all = reconcile(state.skills, state.repositories, this.scan)
       .filter(skill => skill.scope === 'global');
-    const { groupBy } = state;
-    const filtered = this.applyFilter(all, state.statusFilter);
+    const groupBy = viewState.get('groupBy');
+    const filtered = this.applyFilter(all, viewState.get('statusFilter'));
     const visible = groupBy === 'scope'
       ? filtered.filter(skill => skill.hasAgentDiff)
       : filtered;
@@ -120,10 +128,10 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       // Root: bucket or flat.
       if (groupBy === 'flat') {
         return this.renderSkills(
-          sortSkills(visible, state.sortingOption),
+          sortSkills(visible, viewState.get('sortingOption')),
           all,
           'flat',
-          state.groupRepositories,
+          viewState.get('groupRepositories'),
         );
       }
       return this.groupBuckets(visible, groupBy);
@@ -133,10 +141,10 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     if (element.contextValue === 'group' && element.bucketKey !== undefined) {
       const inBucket = visible.filter(s => this.bucketKey(s, groupBy) === element.bucketKey);
       return this.renderSkills(
-        sortSkills(inBucket, state.sortingOption),
+        sortSkills(inBucket, viewState.get('sortingOption')),
         all,
         `${groupBy}:${element.bucketKey}`,
-        state.groupRepositories,
+        viewState.get('groupRepositories'),
       );
     }
     if (element.contextValue === 'repository') {
@@ -362,7 +370,7 @@ function sourceIcon(
   if (sourceType === 'github') {
     const owner = githubOwner(source);
     if (owner) {
-      return vscode.Uri.parse(`https://github.com/${encodeURIComponent(owner)}.png?size=32`);
+      return avatarCache.getAvatar(owner) ?? new vscode.ThemeIcon('github');
     }
     return new vscode.ThemeIcon('github');
   }

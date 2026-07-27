@@ -38,14 +38,13 @@ export function registerAgentCommands(deps: AgentCommandDeps): vscode.Disposable
 
   register('skillsDeck.setupAgents', async () => {
     const agents = agentStore.resolved();
-    const legacy = explicitLegacyAgentIds();
     const picked = await vscode.window.showQuickPick(
       agents.map(agent => ({
         label: agent.displayName,
         description: agent.detected ? 'detected' : 'not detected',
         detail: agent.rootDir,
         agent,
-        picked: agent.detected || legacy.has(agent.id),
+        picked: agent.detected || agent.enabled,
       })),
       {
         canPickMany: true,
@@ -315,17 +314,6 @@ function validateAgentId(value: string, currentId?: string): string | undefined 
     return 'Use lowercase letters, numbers, and single hyphens.';
   }
   return agentStore.isKnownId(value, currentId) ? `"${value}" already exists.` : undefined;
-}
-
-function explicitLegacyAgentIds(): Set<string> {
-  const config = vscode.workspace.getConfiguration('skills-deck');
-  const inspected = config.inspect<string[]>('activeAgents');
-  return new Set(
-    inspected?.workspaceFolderValue
-      ?? inspected?.workspaceValue
-      ?? inspected?.globalValue
-      ?? [],
-  );
 }
 
 async function previewMany(agents: ResolvedAgent[]): Promise<SyncSummary> {

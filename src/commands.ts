@@ -13,6 +13,7 @@ import {
   StatusFilter,
 } from './types';
 import * as store from './store';
+import * as viewState from './viewState';
 import {
   classifySource,
   localPath,
@@ -460,12 +461,12 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       { placeHolder: '过滤状态' },
     );
     if (!picked) { return; }
-    store.update('statusFilter', picked.value);
+    viewState.set('statusFilter', picked.value);
     provider.refresh();
   });
 
   const setGroup = (group: GroupDimension) => {
-    store.update('groupBy', group);
+    viewState.set('groupBy', group);
     vscode.commands.executeCommand('setContext', 'skillsDeck.groupBy', group);
     provider.refresh();
   };
@@ -480,8 +481,8 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   push('skillsDeck.groupByFlat', () => setGroup('flat'));
   push('skillsDeck.groupByFlatCurrent', () => setGroup('flat'));
   push('skillsDeck.toggleRepositoryGrouping', () => {
-    const enabled = !store.get('groupRepositories');
-    store.update('groupRepositories', enabled);
+    const enabled = !viewState.get('groupRepositories');
+    viewState.set('groupRepositories', enabled);
     vscode.commands.executeCommand('setContext', 'skillsDeck.groupRepositories', enabled);
     provider.refresh();
   });
@@ -661,7 +662,14 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       '删除',
     );
     if (action !== '删除') { return; }
-    store.write({ ...store.DEFAULTS, repositories: [], skills: [], categories: ['Default'] });
+    const current = store.read();
+    store.write({
+      ...store.DEFAULTS,
+      repositories: [],
+      skills: [],
+      categories: ['Default'],
+      agents: current.agents,
+    });
     await rescan();
   });
 
