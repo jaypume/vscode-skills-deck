@@ -15,11 +15,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { SkillsState } from './types';
+import { DeclaredSkill, SkillRepository, SkillsState } from './types';
+import { repositoryId, repositoryName } from './source';
 
 const DATA_FILE = 'data.json';
 
 export const DEFAULTS: SkillsState = {
+  schemaVersion: 2,
+  repositories: [],
   skills: [],
   categories: ['Default'],
   groupBy: 'category',
@@ -32,6 +35,7 @@ let file: string | null = null;
 /** Initialize the store path. Call once in activate(). */
 export function init(context: vscode.ExtensionContext): void {
   file = path.join(context.globalStorageUri.fsPath, DATA_FILE);
+  migrateStoredState();
 }
 
 function getStatePath(): string {
@@ -44,7 +48,7 @@ export function read(): SkillsState {
   try {
     const p = getStatePath();
     if (fs.existsSync(p)) {
-      return normalize(JSON.parse(fs.readFileSync(p, 'utf8')));
+      return normalizeState(JSON.parse(fs.readFileSync(p, 'utf8')));
     }
   } catch (e) {
     console.warn('[skills-manager] read store failed:', e);
@@ -96,14 +100,90 @@ export function dataFilePath(): string {
 }
 
 /** Defensive normalization against hand-edited or partial data files. */
-function normalize(o: Partial<SkillsState> | null): SkillsState {
-  const out: SkillsState = { ...DEFAULTS };
-  if (Array.isArray(o?.skills)) { out.skills = o!.skills as SkillsState['skills']; }
-  if (Array.isArray(o?.categories) && o!.categories.length > 0) { out.categories = o!.categories; }
-  if (isGroupBy(o?.groupBy)) { out.groupBy = o!.groupBy; }
-  if (isStatusFilter(o?.statusFilter)) { out.statusFilter = o!.statusFilter; }
-  if (isSorting(o?.sortingOption)) { out.sortingOption = o!.sortingOption; }
+export function normalizeState(o: Partial<SkillsState> | null): SkillsState {
+  const out: SkillsState = { ...DEFAULTS, repositories: [], skills: [] };
+  const raw = (o ?? {}) as Partial<SkillsState> & {
+    skills?: Array<Partial<DeclaredSkill> & {
+      source?: string;
+      category?: string;
+      wanted?: boolean;
+    }>;
+  };
+
+  if (Array.isArray(raw.repositories)) {
+    out.repositories = raw.repositories
+      .filter(repo => repo && typeof repo.repoId === 'string')
+      .map(repo => ({
+        repoId: repo.repoId,
+        name: repo.name || repositoryName(repo.repoId, repo.repoId),
+        source: repo.source,
+        category: repo.category,
+        wanted: repo.wanted,
+        dateAdded: repo.dateAdded || new Date().toISOString(),
+        availableSkills: Array.isArray(repo.availableSkills) ? repo.availableSkills : undefined,
+      }));
+  }
+
+  const repositories = new Map(out.repositories.map(repo => [repo.repoId, repo]));
+  if (Array.isArray(raw.skills)) {
+    for (const item of raw.skills) {
+      if (!item || typeof item.id !== 'string') { continue; }
+      const scope = item.scope === 'project' ? 'project' : 'global';
+      const source = typeof item.source === 'string' ? item.source : '';
+      const repoId = typeof item.repoId === 'string' && item.repoId
+        ? item.repoId
+        : repositoryId(source, `${scope}:${item.id}`);
+      let repository = repositories.get(repoId);
+      if (!repository) {
+        repository = {
+          repoId,
+          name: repositoryName(repoId, item.name || item.id),
+          source,
+          category: item.category || 'Default',
+          wanted: item.wanted ?? true,
+          dateAdded: item.dateAdded || new Date().toISOString(),
+        };
+        repositories.set(repoId, repository);
+      }
+
+      out.skills.push({
+        id: item.id,
+        skillId: item.skillId || item.id,
+        repoId,
+        name: item.name || item.skillId || item.id,
+        source: source && source !== repository.source ? source : undefined,
+        category: item.category && item.category !== repository.category ? item.category : undefined,
+        wanted: item.wanted !== undefined && item.wanted !== repository.wanted
+          ? item.wanted
+          : undefined,
+        dateAdded: item.dateAdded || new Date().toISOString(),
+        scope,
+        note: item.note,
+        legacyRepositoryPlaceholder: item.legacyRepositoryPlaceholder
+          ?? (raw.schemaVersion !== 2
+            && item.id === repositoryName(repoId, item.name || item.id)),
+      });
+    }
+  }
+  out.repositories = Array.from(repositories.values());
+
+  if (Array.isArray(raw.categories) && raw.categories.length > 0) { out.categories = raw.categories; }
+  if (isGroupBy(raw.groupBy)) { out.groupBy = raw.groupBy; }
+  if (isStatusFilter(raw.statusFilter)) { out.statusFilter = raw.statusFilter; }
+  if (isSorting(raw.sortingOption)) { out.sortingOption = raw.sortingOption; }
   return out;
+}
+
+function migrateStoredState(): void {
+  const p = getStatePath();
+  if (!fs.existsSync(p)) { return; }
+  try {
+    const raw = JSON.parse(fs.readFileSync(p, 'utf8')) as Partial<SkillsState>;
+    if (raw.schemaVersion === 2 && Array.isArray(raw.repositories)) { return; }
+    write(normalizeState(raw));
+  } catch (e) {
+    console.warn('[skills-manager] migrate store failed:', e);
+  }
 }
 
 function isGroupBy(v: unknown): v is SkillsState['groupBy'] {

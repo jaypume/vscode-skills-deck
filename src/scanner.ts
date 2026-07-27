@@ -17,11 +17,18 @@ import * as vscode from 'vscode';
 import matter from 'gray-matter';
 import { InstalledSkill, ScanResult, SkillScope } from './types';
 import { KNOWN_AGENTS, KnownAgent } from './known-agents';
+import { normalizeSource } from './source';
 
 interface AgentScanEntry {
   skill: InstalledSkill;
   agentDisplayName: string;
   isCanonical: boolean;
+}
+
+interface LockEntry {
+  source?: string;
+  sourceUrl?: string;
+  sourceType?: string;
 }
 
 export class SkillScanner {
@@ -64,12 +71,13 @@ export class SkillScanner {
 
   async scan(): Promise<ScanResult> {
     const activeAgents = this.getActiveAgents();
+    const globalSources = await this.readLockSources(this.globalLockPath());
 
     // Global skills
     const globalEntries: AgentScanEntry[] = [];
     for (const agent of activeAgents) {
       const dir = this.resolveGlobalDir(agent);
-      const skills = await this.scanDirectory(dir, 'global');
+      const skills = await this.scanDirectory(dir, 'global', globalSources);
       for (const skill of skills) {
         globalEntries.push({ skill, agentDisplayName: agent.displayName, isCanonical: agent.isCanonical === true });
       }
@@ -81,10 +89,11 @@ export class SkillScanner {
     const ws = vscode.workspace.workspaceFolders;
     const root = ws?.[0]?.uri.fsPath;
     if (root) {
+      const projectSources = await this.readLockSources(path.join(root, 'skills-lock.json'));
       const projectEntries: AgentScanEntry[] = [];
       for (const agent of activeAgents) {
         const dir = path.join(root, agent.skillsDir);
-        const skills = await this.scanDirectory(dir, 'project');
+        const skills = await this.scanDirectory(dir, 'project', projectSources);
         for (const skill of skills) {
           projectEntries.push({ skill, agentDisplayName: agent.displayName, isCanonical: agent.isCanonical === true });
         }
@@ -123,7 +132,11 @@ export class SkillScanner {
     }));
   }
 
-  private async scanDirectory(dir: string, scope: SkillScope): Promise<InstalledSkill[]> {
+  private async scanDirectory(
+    dir: string,
+    scope: SkillScope,
+    sources: Map<string, string>,
+  ): Promise<InstalledSkill[]> {
     const skills: InstalledSkill[] = [];
     try { await fs.promises.access(dir); } catch { return skills; }
 
@@ -132,6 +145,9 @@ export class SkillScanner {
     catch { return skills; }
 
     for (const entry of entries) {
+      // Hidden directories may be owned by the agent runtime (for example,
+      // Codex's `.system`) and are outside user-managed skill state.
+      if (entry.name.startsWith('.')) { continue; }
       if (!(await this.isDirectoryEntry(dir, entry))) { continue; }
       const skillMdPath = path.join(dir, entry.name, 'SKILL.md');
       const parsed = await this.parseSkillMd(skillMdPath);
@@ -143,9 +159,33 @@ export class SkillScanner {
         path: path.join(dir, entry.name),
         scope,
         agents: [],
+        source: sources.get(entry.name),
       });
     }
     return skills;
+  }
+
+  private globalLockPath(): string {
+    const stateHome = process.env.XDG_STATE_HOME;
+    return stateHome
+      ? path.join(stateHome, 'skills', '.skill-lock.json')
+      : path.join(os.homedir(), '.agents', '.skill-lock.json');
+  }
+
+  private async readLockSources(lockPath: string): Promise<Map<string, string>> {
+    const sources = new Map<string, string>();
+    try {
+      const raw = JSON.parse(await fs.promises.readFile(lockPath, 'utf8')) as {
+        skills?: Record<string, LockEntry>;
+      };
+      for (const [skillId, entry] of Object.entries(raw.skills ?? {})) {
+        const value = entry.sourceUrl || entry.source;
+        if (typeof value === 'string' && value.trim()) {
+          sources.set(skillId, normalizeSource(value));
+        }
+      }
+    } catch { /* lock file is optional */ }
+    return sources;
   }
 
   /** Follows symlinks when deciding directory-ness. */

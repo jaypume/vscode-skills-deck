@@ -4,43 +4,50 @@
  * Wires store → scanner → provider → commands, plus:
  *  - FileSystemWatcher + focus rescan to keep installed state fresh.
  *  - onOperationCompleted (from installer) triggers rescan.
- *  - Tree selection drives the Details webview.
+ *  - Tree selection drives the native Details tree.
  */
 
 import * as vscode from 'vscode';
 import * as store from './store';
 import { SkillScanner } from './scanner';
 import { SkillsTreeProvider, SkillNode } from './provider';
-import { DetailsViewProvider } from './detailsView';
+import { DetailsTreeProvider } from './detailsView';
 import { registerCommands } from './commands';
-import { onOperationCompleted, notifyOperationCompleted, disposeTerminal } from './installer';
+import { onOperationCompleted, notifyOperationCompleted, disposeInstaller } from './installer';
 import { reconcile } from './reconcile';
+import { repositoryId, repositoryName } from './source';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   store.init(context);
 
   const scanner = new SkillScanner();
   const provider = new SkillsTreeProvider();
-  const details = new DetailsViewProvider();
+  const details = new DetailsTreeProvider();
 
   const treeView = vscode.window.createTreeView('skillsManager.view', {
     treeDataProvider: provider,
     showCollapseAll: true,
+    canSelectMany: true,
   });
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(DetailsViewProvider.viewType, details),
-  );
+  const detailsView = vscode.window.createTreeView('skillsManager.details', {
+    treeDataProvider: details,
+  });
+  context.subscriptions.push(treeView, detailsView);
 
   // Rescan reads disk + pushes the result into the provider.
   const rescan = async () => {
     const scan = await scanner.scan();
+    reconcileStoredRepositories(scan);
     provider.setScan(scan);
     updateEmptyContext(scan);
     const sel = treeView.selection[0]?.skill;
     if (sel) {
       // Re-derive the selected skill's decorated state for the details pane.
-      const decorated = reconcile(store.get('skills'), scan)
-        .find(s => s.scope === sel.scope && s.id === sel.id);
+      const state = store.read();
+      const decorated = reconcile(state.skills, state.repositories, scan)
+        .find(s => s.scope === sel.scope
+          && s.repoId === sel.repoId
+          && s.skillId === sel.skillId);
       details.show(decorated);
     }
   };
@@ -87,8 +94,75 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (e.affectsConfiguration('skills-manager.activeAgents')) { void rescan(); }
   }));
 
-  context.subscriptions.push({ dispose: disposeTerminal });
+  context.subscriptions.push({ dispose: disposeInstaller });
   await rescan();
+}
+
+function reconcileStoredRepositories(
+  scan: { globalSkills: Array<{ folderName: string; source?: string }>; projectSkills: Array<{ folderName: string; source?: string }> },
+): void {
+  const state = store.read();
+  const installedByRepository = new Map<string, Set<string>>();
+  let changed = false;
+  for (const [scope, skills] of [
+    ['global', scan.globalSkills],
+    ['project', scan.projectSkills],
+  ] as const) {
+    for (const skill of skills) {
+      const source = skill.source ?? '';
+      const repoId = repositoryId(source, `${scope}:${skill.folderName}`);
+      const key = `${scope}:${repoId}`;
+      const ids = installedByRepository.get(key) ?? new Set<string>();
+      ids.add(skill.folderName);
+      installedByRepository.set(key, ids);
+
+      if (!source) { continue; }
+      let repository = state.repositories.find(repo => repo.repoId === repoId);
+      if (!repository) {
+        repository = {
+          repoId,
+          name: repositoryName(repoId, skill.folderName),
+          source,
+          category: 'Default',
+          wanted: true,
+          dateAdded: new Date().toISOString(),
+          availableSkills: [],
+        };
+        state.repositories.push(repository);
+        changed = true;
+      }
+      const available = repository.availableSkills ?? [];
+      if (!available.some(item => item.skillId === skill.folderName)) {
+        available.push({ skillId: skill.folderName, name: skill.folderName });
+        repository.availableSkills = available;
+        changed = true;
+      }
+
+      const declaration = state.skills.find(item =>
+        item.scope === scope && item.id === skill.folderName);
+      if (!declaration) { continue; }
+      const previousRepository = state.repositories.find(repo => repo.repoId === declaration.repoId);
+      const effectiveSource = declaration.source ?? previousRepository?.source ?? '';
+      if (effectiveSource || declaration.repoId === repoId) { continue; }
+      const category = declaration.category ?? previousRepository?.category ?? 'Default';
+      const wanted = declaration.wanted ?? previousRepository?.wanted ?? true;
+      declaration.repoId = repoId;
+      declaration.source = undefined;
+      declaration.category = category === (repository.category ?? 'Default') ? undefined : category;
+      declaration.wanted = wanted === (repository.wanted ?? true) ? undefined : wanted;
+      changed = true;
+    }
+  }
+  const filtered = state.skills.filter(skill => {
+    if (!skill.legacyRepositoryPlaceholder) { return true; }
+    const installed = installedByRepository.get(`${skill.scope}:${skill.repoId}`);
+    return !installed || installed.size <= 1 || installed.has(skill.id);
+  });
+  if (filtered.length !== state.skills.length) {
+    state.skills = filtered;
+    changed = true;
+  }
+  if (changed) { store.write(state); }
 }
 
 function updateEmptyContext(scan: { globalSkills: unknown[]; projectSkills: unknown[] }): void {

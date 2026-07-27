@@ -102,6 +102,33 @@ export function npxAddArg(source: string): string {
   }
 }
 
+/** Stable repository identity shared by all skills discovered from a source. */
+export function repositoryId(source: string, fallback: string): string {
+  const { type, spec } = parseSource(source);
+  if (type === 'github') {
+    const repo = githubRepository(spec);
+    if (repo) { return `github:${repo.toLowerCase()}`; }
+  }
+  const normalized = source.trim().replace(/\/+$/, '');
+  return normalized || `legacy:${fallback}`;
+}
+
+/** Human-readable repository name for tree labels. */
+export function repositoryName(repoId: string, fallback: string): string {
+  const raw = repoId.replace(/^[^:]+:/, '');
+  return raw.split('/').filter(Boolean).pop() || fallback;
+}
+
+function githubRepository(spec: string): string | undefined {
+  const cleaned = spec.trim()
+    .replace(/^git@github\.com:/i, '')
+    .replace(/^https?:\/\/github\.com\//i, '')
+    .replace(/\.git(?:\/|$)/i, '/');
+  const parts = cleaned.split('/').filter(Boolean);
+  if (parts.length < 2) { return undefined; }
+  return `${parts[0]}/${parts[1]}`;
+}
+
 /**
  * Parse a pasted `npx skills add <args>` command into source + optional skill.
  * Used by the Add wizard's "skills.sh" path.

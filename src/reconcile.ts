@@ -7,8 +7,17 @@
  * undeclared skills become `extra` pseudo-entries.
  */
 
-import { DeclaredSkill, DecoratedSkill, InstalledSkill, ScanResult, SkillScope, SkillStatus } from './types';
-import { classifySource } from './source';
+import {
+  DeclaredSkill,
+  DecoratedSkill,
+  InstalledSkill,
+  ResolvedSkill,
+  ScanResult,
+  SkillRepository,
+  SkillScope,
+  SkillStatus,
+} from './types';
+import { classifySource, repositoryId, repositoryName } from './source';
 
 /** folderName → installed skill (with merged agents), for a given scope. */
 export type InstalledMap = Map<string, InstalledSkill>;
@@ -30,7 +39,7 @@ export function buildInstalledMap(scan: ScanResult, scope: SkillScope): Installe
  *   !want + actual → 'unwanted-installed'  ★ diff
  *   !want + missing→ 'unwanted-missing'
  */
-export function decorateSkill(declared: DeclaredSkill, installed: InstalledMap): DecoratedSkill {
+export function decorateSkill(declared: ResolvedSkill, installed: InstalledMap): DecoratedSkill {
   const actual = installed.get(declared.id);
   const want = declared.wanted;
   const status: SkillStatus = want
@@ -52,19 +61,33 @@ export function decorateSkill(declared: DeclaredSkill, installed: InstalledMap):
  */
 export function computeExtras(
   declared: DeclaredSkill[],
+  repositories: SkillRepository[],
   scan: ScanResult,
 ): DecoratedSkill[] {
-  const declaredIds = new Set(declared.map(d => d.id));
+  const declaredIds = new Set(declared.map(d => `${d.scope}:${d.id}`));
+  const repositoryMap = new Map(repositories.map(repo => [repo.repoId, repo]));
   const out: DecoratedSkill[] = [];
 
   for (const scope of ['global', 'project'] as SkillScope[]) {
     const map = buildInstalledMap(scan, scope);
     for (const [folderName, installed] of map) {
-      if (declaredIds.has(folderName)) { continue; }
+      if (declaredIds.has(`${scope}:${folderName}`)) { continue; }
+      const source = installed.source ?? '';
+      const repoId = repositoryId(source, `${scope}:${folderName}`);
+      const repository = repositoryMap.get(repoId) ?? {
+        repoId,
+        name: repositoryName(repoId, folderName),
+        source,
+        category: 'Default',
+        wanted: false,
+        dateAdded: '',
+      };
       out.push({
         id: folderName,
+        skillId: folderName,
+        repoId,
         name: installed.name,
-        source: installed.source ?? '',
+        source,
         category: 'Default',
         wanted: false,
         dateAdded: '',
@@ -74,6 +97,7 @@ export function computeExtras(
         sourceType: classifySource(installed.source ?? ''),
         installedAgents: installed.agents,
         installedPath: installed.path,
+        repository,
         extra: true,
       });
     }
@@ -86,17 +110,43 @@ export function isDiffStatus(s: SkillStatus): boolean {
   return s === 'wanted-missing' || s === 'unwanted-installed' || s === 'extra';
 }
 
+export function resolveDeclaredSkill(
+  declared: DeclaredSkill,
+  repositories: SkillRepository[],
+): ResolvedSkill {
+  const repository = repositories.find(repo => repo.repoId === declared.repoId) ?? {
+    repoId: declared.repoId,
+    name: repositoryName(declared.repoId, declared.name),
+    source: declared.source ?? '',
+    category: 'Default',
+    wanted: true,
+    dateAdded: declared.dateAdded,
+  };
+  return {
+    ...declared,
+    source: declared.source ?? repository.source ?? '',
+    category: declared.category ?? repository.category ?? 'Default',
+    wanted: declared.wanted ?? repository.wanted ?? true,
+    repository,
+  };
+}
+
 /**
  * Full reconcile: decorate every declared skill + append extras.
  * Each declared skill is checked against its own scope's installed map.
  */
-export function reconcile(declared: DeclaredSkill[], scan: ScanResult): DecoratedSkill[] {
+export function reconcile(
+  declared: DeclaredSkill[],
+  repositories: SkillRepository[],
+  scan: ScanResult,
+): DecoratedSkill[] {
   const globalMap = buildInstalledMap(scan, 'global');
   const projectMap = buildInstalledMap(scan, 'project');
 
-  const decorated = declared.map(d =>
-    decorateSkill(d, d.scope === 'project' ? projectMap : globalMap),
-  );
-  const extras = computeExtras(declared, scan);
+  const decorated = declared.map(item => {
+    const resolved = resolveDeclaredSkill(item, repositories);
+    return decorateSkill(resolved, resolved.scope === 'project' ? projectMap : globalMap);
+  });
+  const extras = computeExtras(declared, repositories, scan);
   return [...decorated, ...extras];
 }

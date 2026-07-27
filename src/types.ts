@@ -20,29 +20,54 @@ export type StatusFilter = 'all' | 'installed' | 'unwanted' | 'diff';
 
 export type SortingOption = 'A-Z' | 'Z-A' | 'New-Old' | 'Old-New';
 
+export interface RepositorySkill {
+  skillId: string;
+  name: string;
+  description?: string;
+}
+
+/** Shared source metadata and defaults inherited by child skills. */
+export interface SkillRepository {
+  repoId: string;
+  name: string;
+  source?: string;
+  category?: string;
+  wanted?: boolean;
+  dateAdded: string;
+  availableSkills?: RepositorySkill[];
+}
+
 /**
  * A skill the user declared. Corresponds to extensions-bookmark's `Bookmark`.
- * `wanted` is the declarative field; actual install state is reconciled later.
+ * Optional fields override repository defaults when present.
  */
 export interface DeclaredSkill {
-  /** Stable key, lowercase-kebab, equals the on-disk folder name. */
+  /** Actual on-disk folder name. */
   id: string;
+  /** Stable skill identity within its source repository. */
+  skillId: string;
+  /** Parent repository/source identity. */
+  repoId: string;
   /** Display name (from SKILL.md frontmatter, or falls back to id). */
   name: string;
-  /** Normalized source string, e.g. `github:owner/repo`, `local:/abs/path`. */
-  source: string;
-  /** User category; defaults to 'Default'. */
-  category: string;
-  /** true = want it installed, false = want it removed. */
-  wanted: boolean;
+  /** Per-skill source override. */
+  source?: string;
+  /** Per-skill category override. */
+  category?: string;
+  /** Per-skill wanted override. */
+  wanted?: boolean;
   /** ISO date string, for chronological sorting. */
   dateAdded: string;
   scope: SkillScope;
   note?: string;
+  /** One-time marker for v1 records that represented a repository as a skill. */
+  legacyRepositoryPlaceholder?: boolean;
 }
 
 /** Top-level persisted state. Mirrors extensions-bookmark store DEFAULTS. */
 export interface SkillsState {
+  schemaVersion: 2;
+  repositories: SkillRepository[];
   skills: DeclaredSkill[];
   categories: string[];
   groupBy: GroupDimension;
@@ -82,8 +107,16 @@ export interface ScanResult {
   projectSkills: InstalledSkill[];
 }
 
+/** A declaration with repository defaults resolved. */
+export interface ResolvedSkill extends DeclaredSkill {
+  source: string;
+  category: string;
+  wanted: boolean;
+  repository: SkillRepository;
+}
+
 /** A declared skill augmented with reconciled runtime state. */
-export interface DecoratedSkill extends DeclaredSkill {
+export interface DecoratedSkill extends ResolvedSkill {
   status: SkillStatus;
   sourceType: SourceType;
   /** Agents where this skill is actually installed. Empty when missing. */

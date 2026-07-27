@@ -1,72 +1,154 @@
 /**
- * Details webview — shows the selected skill's reconciled state, source,
- * agents, and note. Simplified port of extensions-bookmark DetailsViewProvider.
+ * Native details tree for the selected skill.
+ *
+ * The view intentionally uses TreeItem labels, descriptions, icons, tooltips,
+ * selection, and keyboard navigation instead of recreating VS Code UI in HTML.
  */
 
 import * as vscode from 'vscode';
-import { DecoratedSkill } from './types';
+import { DecoratedSkill, SkillStatus } from './types';
 import { STATUS_VISUALS } from './visuals';
 
-export class DetailsViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'skillsManager.details';
-  private view?: vscode.WebviewView;
-  private current?: DecoratedSkill;
+type DetailsNodeKind = 'skill' | 'property' | 'placeholder';
 
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = { enableScripts: false };
-    view.webview.html = this.render(this.current);
-  }
-
-  show(skill: DecoratedSkill | undefined): void {
-    this.current = skill;
-    if (this.view) {
-      this.view.webview.html = this.render(skill);
-      this.view.show?.(true);
-    }
-  }
-
-  private render(s: DecoratedSkill | undefined): string {
-    if (!s) {
-      return this.shell('<p class="hint">Select a skill to see its details.</p>');
-    }
-    const v = STATUS_VISUALS[s.status];
-    const rows = [
-      ['Status', `${v.desc}${v.diff ? ' ★' : ''}`],
-      ['Source', s.source || '—'],
-      ['Type', s.sourceType],
-      ['Scope', s.scope],
-      ['Agents', s.installedAgents.length ? s.installedAgents.join(', ') : '—'],
-      ['Wanted', s.wanted ? 'yes' : 'no'],
-      ['Path', s.installedPath ?? '—'],
-    ];
-    if (s.note) { rows.push(['Note', s.note]); }
-    const body = `
-      <h2>${escapeHtml(s.name)}</h2>
-      <span class="badge ${v.diff ? 'diff' : 'ok'}">${escapeHtml(v.desc)}${v.diff ? ' ★' : ''}</span>
-      <table>
-        ${rows.map(([k, val]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(String(val))}</td></tr>`).join('')}
-      </table>`;
-    return this.shell(body);
-  }
-
-  private shell(body: string): string {
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 12px; }
-      h2 { margin: 0 0 8px; font-size: 16px; }
-      .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-bottom: 12px; }
-      .badge.ok { background: var(--vscode-testing-iconPassed, #3fb950); color: #fff; }
-      .badge.diff { background: var(--vscode-charts-yellow, #d29922); color: #000; }
-      table { border-collapse: collapse; width: 100%; font-size: 13px; }
-      th { text-align: left; padding: 4px 8px 4px 0; color: var(--vscode-descriptionForeground); white-space: nowrap; width: 1%; }
-      td { padding: 4px 0; word-break: break-all; }
-      .hint { color: var(--vscode-descriptionForeground); }
-    </style></head><body>${body}</body></html>`;
+class DetailsNode extends vscode.TreeItem {
+  constructor(
+    public readonly kind: DetailsNodeKind,
+    label: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+  ) {
+    super(label, collapsibleState);
+    this.contextValue = `skillDetails.${kind}`;
   }
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]!));
+interface PropertySpec {
+  key: string;
+  label: string;
+  value: string;
+  icon: string;
+  color?: string;
+}
+
+export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode> {
+  private readonly onDidChangeEmitter = new vscode.EventEmitter<DetailsNode | undefined>();
+  readonly onDidChangeTreeData = this.onDidChangeEmitter.event;
+
+  private current?: DecoratedSkill;
+
+  show(skill: DecoratedSkill | undefined): void {
+    this.current = skill;
+    this.onDidChangeEmitter.fire(undefined);
+  }
+
+  getTreeItem(element: DetailsNode): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: DetailsNode): DetailsNode[] {
+    if (!this.current) {
+      return element ? [] : [this.placeholder()];
+    }
+    if (!element) {
+      return [this.skillNode(this.current)];
+    }
+    if (element.kind === 'skill') {
+      return this.propertyNodes(this.current);
+    }
+    return [];
+  }
+
+  private placeholder(): DetailsNode {
+    const node = new DetailsNode(
+      'placeholder',
+      'Select a skill to view details',
+      vscode.TreeItemCollapsibleState.None,
+    );
+    node.iconPath = new vscode.ThemeIcon('info');
+    return node;
+  }
+
+  private skillNode(skill: DecoratedSkill): DetailsNode {
+    const visual = STATUS_VISUALS[skill.status];
+    const node = new DetailsNode(
+      'skill',
+      skill.name,
+      vscode.TreeItemCollapsibleState.Expanded,
+    );
+    node.id = `details:${skill.scope}:${skill.repoId}:${skill.skillId}`;
+    node.description = `${visual.desc}${visual.diff ? ' ★' : ''}`;
+    node.iconPath = new vscode.ThemeIcon(
+      statusIcon(skill.status),
+      new vscode.ThemeColor(visual.color),
+    );
+    node.tooltip = [skill.name, skill.source || 'No source', skill.installedPath]
+      .filter(Boolean)
+      .join('\n');
+    return node;
+  }
+
+  private propertyNodes(skill: DecoratedSkill): DetailsNode[] {
+    const visual = STATUS_VISUALS[skill.status];
+    const properties: PropertySpec[] = [
+      {
+        key: 'status',
+        label: 'Status',
+        value: `${visual.desc}${visual.diff ? ' ★' : ''}`,
+        icon: statusIcon(skill.status),
+        color: visual.color,
+      },
+      { key: 'source', label: 'Source', value: skill.source || '—', icon: 'link' },
+      { key: 'type', label: 'Type', value: skill.sourceType, icon: 'symbol-enum' },
+      { key: 'repository', label: 'Repository', value: skill.repository.name, icon: 'repo' },
+      { key: 'skillId', label: 'Skill ID', value: skill.skillId, icon: 'symbol-key' },
+      { key: 'installId', label: 'Install ID', value: skill.id, icon: 'folder' },
+      { key: 'scope', label: 'Scope', value: skill.scope, icon: 'root-folder' },
+      {
+        key: 'agents',
+        label: 'Agents',
+        value: skill.installedAgents.length ? skill.installedAgents.join(', ') : '—',
+        icon: 'organization',
+      },
+      {
+        key: 'wanted',
+        label: 'Wanted',
+        value: skill.wanted ? 'yes' : 'no',
+        icon: skill.wanted ? 'check' : 'close',
+      },
+      { key: 'category', label: 'Category', value: skill.category, icon: 'tag' },
+      { key: 'path', label: 'Path', value: skill.installedPath ?? '—', icon: 'folder-opened' },
+    ];
+    if (skill.note) {
+      properties.push({ key: 'note', label: 'Note', value: skill.note, icon: 'note' });
+    }
+    if (skill.dateAdded) {
+      properties.push({ key: 'dateAdded', label: 'Added', value: skill.dateAdded, icon: 'calendar' });
+    }
+
+    return properties.map(property => {
+      const node = new DetailsNode(
+        'property',
+        property.label,
+        vscode.TreeItemCollapsibleState.None,
+      );
+      node.id = `details:${skill.scope}:${skill.repoId}:${skill.skillId}:${property.key}`;
+      node.description = property.value;
+      node.tooltip = property.value;
+      node.iconPath = new vscode.ThemeIcon(
+        property.icon,
+        property.color ? new vscode.ThemeColor(property.color) : undefined,
+      );
+      return node;
+    });
+  }
+}
+
+function statusIcon(status: SkillStatus): string {
+  switch (status) {
+    case 'wanted-installed': return 'check';
+    case 'wanted-missing': return 'arrow-down';
+    case 'unwanted-installed': return 'close';
+    case 'unwanted-missing': return 'circle-slash';
+    case 'extra': return 'sparkle';
+  }
 }

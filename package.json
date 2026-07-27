@@ -48,8 +48,7 @@
         },
         {
           "id": "skillsManager.details",
-          "name": "Details",
-          "type": "webview"
+          "name": "Details"
         }
       ]
     },
@@ -65,6 +64,18 @@
         "title": "Remove from List",
         "category": "Skills Manager",
         "icon": "$(close)"
+      },
+      {
+        "command": "skillsManager.removeRepository",
+        "title": "Delete Repository and Skills",
+        "category": "Skills Manager",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "skillsManager.updateRepository",
+        "title": "Update Repository",
+        "category": "Skills Manager",
+        "icon": "$(sync)"
       },
       {
         "command": "skillsManager.editSkill",
@@ -91,33 +102,58 @@
       },
       {
         "command": "skillsManager.groupByCategory",
-        "title": "Category",
+        "title": "Category (Default, custom)",
         "category": "Skills Manager",
         "icon": "$(folder)"
       },
       {
+        "command": "skillsManager.groupByCategoryCurrent",
+        "title": "✓ Category (Default, custom)",
+        "category": "Skills Manager"
+      },
+      {
         "command": "skillsManager.groupBySource",
-        "title": "Source",
+        "title": "Source (GitHub, Local, Marketplace)",
         "category": "Skills Manager",
         "icon": "$(symbol-namespace)"
       },
       {
+        "command": "skillsManager.groupBySourceCurrent",
+        "title": "✓ Source (GitHub, Local, Marketplace)",
+        "category": "Skills Manager"
+      },
+      {
         "command": "skillsManager.groupByStatus",
-        "title": "Status",
+        "title": "Status (Wanted, Unwanted, Diff)",
         "category": "Skills Manager",
         "icon": "$(circle-filled)"
       },
       {
+        "command": "skillsManager.groupByStatusCurrent",
+        "title": "✓ Status (Wanted, Unwanted, Diff)",
+        "category": "Skills Manager"
+      },
+      {
         "command": "skillsManager.groupByScope",
-        "title": "Scope",
+        "title": "Scope (Global, Project)",
         "category": "Skills Manager",
         "icon": "$(root-folder)"
       },
       {
+        "command": "skillsManager.groupByScopeCurrent",
+        "title": "✓ Scope (Global, Project)",
+        "category": "Skills Manager"
+      },
+      {
         "command": "skillsManager.groupByFlat",
-        "title": "Flat List",
+        "title": "Flat List (No grouping)",
         "category": "Skills Manager",
         "icon": "$(list-flat)"
+      },
+      {
+        "command": "skillsManager.groupByFlatCurrent",
+        "title": "✓ Flat List (No grouping)",
+        "category": "Skills Manager"
       },
       {
         "command": "skillsManager.syncToData",
@@ -132,15 +168,46 @@
         "icon": "$(arrow-up)"
       },
       {
-        "command": "skillsManager.syncSkill",
-        "title": "Sync This Skill",
+        "command": "skillsManager.installSelected",
+        "title": "Install",
         "category": "Skills Manager",
-        "icon": "$(sync)"
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "skillsManager.uninstallSelected",
+        "title": "Uninstall",
+        "category": "Skills Manager",
+        "icon": "$(trash)"
       },
       {
         "command": "skillsManager.toggleWanted",
-        "title": "Toggle Wanted / Not Wanted",
-        "category": "Skills Manager"
+        "title": "Toggle Wanted / Unwanted",
+        "category": "Skills Manager",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "skillsManager.inlineWanted",
+        "title": "Wanted — Toggle to Unwanted",
+        "category": "Skills Manager",
+        "icon": "media/status-wanted.svg"
+      },
+      {
+        "command": "skillsManager.inlineUnwanted",
+        "title": "Unwanted — Toggle to Wanted",
+        "category": "Skills Manager",
+        "icon": "media/status-unwanted.svg"
+      },
+      {
+        "command": "skillsManager.inlineInstalled",
+        "title": "Installed — Uninstall",
+        "category": "Skills Manager",
+        "icon": "media/status-installed.svg"
+      },
+      {
+        "command": "skillsManager.inlineMissing",
+        "title": "Not Installed — Install",
+        "category": "Skills Manager",
+        "icon": "media/status-missing.svg"
       },
       {
         "command": "skillsManager.openSkillMd",
@@ -181,43 +248,66 @@
     "menus": {
       "commandPalette": [
         { "command": "skillsManager.removeSkill", "when": "false" },
+        { "command": "skillsManager.removeRepository", "when": "false" },
+        { "command": "skillsManager.updateRepository", "when": "false" },
         { "command": "skillsManager.editSkill", "when": "false" },
-        { "command": "skillsManager.syncSkill", "when": "false" },
+        { "command": "skillsManager.installSelected", "when": "false" },
+        { "command": "skillsManager.uninstallSelected", "when": "false" },
         { "command": "skillsManager.toggleWanted", "when": "false" },
+        { "command": "skillsManager.inlineWanted", "when": "false" },
+        { "command": "skillsManager.inlineUnwanted", "when": "false" },
+        { "command": "skillsManager.inlineInstalled", "when": "false" },
+        { "command": "skillsManager.inlineMissing", "when": "false" },
         { "command": "skillsManager.openSkillMd", "when": "false" },
         { "command": "skillsManager.previewSkillMd", "when": "false" },
         { "command": "skillsManager.copyPath", "when": "false" },
         { "command": "skillsManager.groupByCategory", "when": "false" },
+        { "command": "skillsManager.groupByCategoryCurrent", "when": "false" },
         { "command": "skillsManager.groupBySource", "when": "false" },
+        { "command": "skillsManager.groupBySourceCurrent", "when": "false" },
         { "command": "skillsManager.groupByStatus", "when": "false" },
+        { "command": "skillsManager.groupByStatusCurrent", "when": "false" },
         { "command": "skillsManager.groupByScope", "when": "false" },
-        { "command": "skillsManager.groupByFlat", "when": "false" }
+        { "command": "skillsManager.groupByScopeCurrent", "when": "false" },
+        { "command": "skillsManager.groupByFlat", "when": "false" },
+        { "command": "skillsManager.groupByFlatCurrent", "when": "false" }
       ],
       "view/title": [
         { "command": "skillsManager.addSkill", "when": "view == skillsManager.view", "group": "navigation@1" },
-        { "command": "skillsManager.search", "when": "view == skillsManager.view", "group": "navigation@2" },
-        { "command": "skillsManager.refresh", "when": "view == skillsManager.view", "group": "navigation@3" },
-        { "command": "skillsManager.syncFromData", "when": "view == skillsManager.view", "group": "navigation@4" },
-        { "submenu": "skillsManager.groupBy", "when": "view == skillsManager.view", "group": "navigation@5" },
-        { "command": "skillsManager.filterStatus", "when": "view == skillsManager.view", "group": "filter@1" },
+        { "submenu": "skillsManager.groupBy", "when": "view == skillsManager.view", "group": "navigation@2" },
+        { "command": "skillsManager.search", "when": "view == skillsManager.view", "group": "navigation@3" },
+        { "command": "skillsManager.refresh", "when": "view == skillsManager.view", "group": "navigation@4" },
         { "command": "skillsManager.syncToData", "when": "view == skillsManager.view", "group": "sync@1" },
+        { "command": "skillsManager.syncFromData", "when": "view == skillsManager.view", "group": "sync@2" },
         { "command": "skillsManager.openDataFile", "when": "view == skillsManager.view", "group": "settings@1" }
       ],
       "skillsManager.groupBy": [
-        { "command": "skillsManager.groupByCategory", "group": "1_group@1", "toggled": "skillsManager.groupBy == 'category'" },
-        { "command": "skillsManager.groupBySource", "group": "1_group@2", "toggled": "skillsManager.groupBy == 'source'" },
-        { "command": "skillsManager.groupByStatus", "group": "1_group@3", "toggled": "skillsManager.groupBy == 'status'" },
-        { "command": "skillsManager.groupByScope", "group": "1_group@4", "toggled": "skillsManager.groupBy == 'scope'" },
-        { "command": "skillsManager.groupByFlat", "group": "1_group@5", "toggled": "skillsManager.groupBy == 'flat'" }
+        { "command": "skillsManager.groupByCategory", "when": "skillsManager.groupBy != 'category'", "group": "1_group@1" },
+        { "command": "skillsManager.groupByCategoryCurrent", "when": "skillsManager.groupBy == 'category'", "group": "1_group@1" },
+        { "command": "skillsManager.groupBySource", "when": "skillsManager.groupBy != 'source'", "group": "1_group@2" },
+        { "command": "skillsManager.groupBySourceCurrent", "when": "skillsManager.groupBy == 'source'", "group": "1_group@2" },
+        { "command": "skillsManager.groupByStatus", "when": "skillsManager.groupBy != 'status'", "group": "1_group@3" },
+        { "command": "skillsManager.groupByStatusCurrent", "when": "skillsManager.groupBy == 'status'", "group": "1_group@3" },
+        { "command": "skillsManager.groupByScope", "when": "skillsManager.groupBy != 'scope'", "group": "1_group@4" },
+        { "command": "skillsManager.groupByScopeCurrent", "when": "skillsManager.groupBy == 'scope'", "group": "1_group@4" },
+        { "command": "skillsManager.groupByFlat", "when": "skillsManager.groupBy != 'flat'", "group": "1_group@5" },
+        { "command": "skillsManager.groupByFlatCurrent", "when": "skillsManager.groupBy == 'flat'", "group": "1_group@5" }
       ],
       "view/item/context": [
-        { "command": "skillsManager.syncSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@1" },
-        { "command": "skillsManager.toggleWanted", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@2" },
-        { "command": "skillsManager.removeSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "inline@3" },
+        { "command": "skillsManager.inlineWanted", "when": "view == skillsManager.view && viewItem =~ /\\.wanted\\./", "group": "inline@1" },
+        { "command": "skillsManager.inlineUnwanted", "when": "view == skillsManager.view && viewItem =~ /\\.unwanted\\./", "group": "inline@1" },
+        { "command": "skillsManager.inlineInstalled", "when": "view == skillsManager.view && viewItem =~ /\\.installed$/", "group": "inline@2" },
+        { "command": "skillsManager.inlineMissing", "when": "view == skillsManager.view && viewItem =~ /\\.missing$/", "group": "inline@2" },
         { "command": "skillsManager.openSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@1" },
         { "command": "skillsManager.previewSkillMd", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "1_open@2" },
-        { "command": "skillsManager.editSkill", "when": "view == skillsManager.view && viewItem == declaredSkill", "group": "2_edit@1" },
-        { "command": "skillsManager.copyPath", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "3_info@1" }
+        { "command": "skillsManager.editSkill", "when": "view == skillsManager.view && viewItem =~ /^declaredSkill\\./", "group": "2_edit@1" },
+        { "command": "skillsManager.copyPath", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "3_info@1" },
+        { "command": "skillsManager.installSelected", "when": "view == skillsManager.view && viewItem =~ /\\.missing$/", "group": "4_manage@1" },
+        { "command": "skillsManager.uninstallSelected", "when": "view == skillsManager.view && viewItem =~ /\\.installed$/", "group": "4_manage@1" },
+        { "command": "skillsManager.toggleWanted", "when": "view == skillsManager.view && viewItem =~ /Skill/", "group": "4_manage@2" },
+        { "command": "skillsManager.removeSkill", "when": "view == skillsManager.view && viewItem =~ /^declaredSkill\\./", "group": "4_manage@3" },
+        { "command": "skillsManager.updateRepository", "when": "view == skillsManager.view && viewItem == repository", "group": "4_manage@1" },
+        { "command": "skillsManager.removeRepository", "when": "view == skillsManager.view && viewItem == repository", "group": "4_manage@3" }
       ]
     },
     "viewsWelcome": [

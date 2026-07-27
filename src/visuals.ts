@@ -6,18 +6,17 @@
 import { DecoratedSkill, SkillStatus, SortingOption } from './types';
 
 export interface StatusVisual {
-  codicon: string;       // e.g. '$(check)'
   color: string;         // ThemeColor id, e.g. 'testing.iconPassed'
   desc: string;          // short inline label
   diff: boolean;         // ★ — diverges from declaration
 }
 
 export const STATUS_VISUALS: Record<SkillStatus, StatusVisual> = {
-  'wanted-installed':   { codicon: '$(check)',       color: 'testing.iconPassed',   desc: 'installed',   diff: false },
-  'wanted-missing':     { codicon: '$(arrow-down)',  color: 'testing.iconQueued',    desc: 'not installed', diff: true },
-  'unwanted-installed': { codicon: '$(x)',           color: 'testing.iconFailed',    desc: 'to remove',   diff: true },
-  'unwanted-missing':   { codicon: '$(circle-slash)',color: 'disabledForeground',    desc: 'removed',     diff: false },
-  'extra':              { codicon: '$(sparkle)',     color: 'charts.blue',           desc: 'undeclared',  diff: true },
+  'wanted-installed':   { color: 'testing.iconPassed', desc: 'installed', diff: false },
+  'wanted-missing':     { color: 'testing.iconQueued', desc: 'not installed', diff: true },
+  'unwanted-installed': { color: 'testing.iconFailed', desc: 'to remove', diff: true },
+  'unwanted-missing':   { color: 'disabledForeground', desc: 'removed', diff: false },
+  'extra':              { color: 'charts.blue', desc: 'undeclared', diff: true },
 };
 
 /** Layered sort rank within a bucket: clean states first, diffs next, unwanted last. */

@@ -11,34 +11,41 @@
  */
 
 import * as vscode from 'vscode';
-import { DecoratedSkill, GroupDimension, ScanResult, SkillScope, StatusFilter } from './types';
+import {
+  DecoratedSkill,
+  GroupDimension,
+  ScanResult,
+  SkillRepository,
+  SkillScope,
+  StatusFilter,
+} from './types';
 import { reconcile, isDiffStatus } from './reconcile';
 import { read } from './store';
 import { sortSkills, statusRank, STATUS_VISUALS } from './visuals';
+import { parseSource } from './source';
+
+type SkillNodeContext =
+  | `declaredSkill.${'wanted' | 'unwanted'}.${'installed' | 'missing'}`
+  | 'extraSkill.unwanted.installed'
+  | 'repository'
+  | 'group';
 
 /** A tree node. Leaf = a skill; branch = a group bucket. */
 export class SkillNode extends vscode.TreeItem {
   constructor(
-    public readonly label: string,
+    label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly contextValue: 'declaredSkill' | 'extraSkill' | 'group',
+    public readonly contextValue: SkillNodeContext,
     public readonly skill?: DecoratedSkill,
     public readonly bucketKey?: string,
+    public readonly repository?: SkillRepository,
+    public readonly repositorySkills?: DecoratedSkill[],
   ) {
     super(label, collapsibleState);
     if (skill) {
-      this.id = `${skill.scope}:${skill.id}`;
-      this.description = this.buildDescription(skill);
-      this.iconPath = new vscode.ThemeIcon(STATUS_VISUALS[skill.status].codicon,
-        new vscode.ThemeColor(STATUS_VISUALS[skill.status].color));
+      this.id = `${skill.scope}:${skill.repoId}:${skill.skillId}`;
       this.tooltip = this.buildTooltip(skill);
     }
-  }
-
-  private buildDescription(s: DecoratedSkill): string {
-    const v = STATUS_VISUALS[s.status];
-    const agents = s.installedAgents.length ? s.installedAgents.join(', ') : '';
-    return [v.desc, agents].filter(Boolean).join(' · ');
   }
 
   private buildTooltip(s: DecoratedSkill): vscode.MarkdownString {
@@ -84,14 +91,14 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
 
   getChildren(element?: SkillNode): SkillNode[] {
     const state = read();
-    const all = reconcile(state.skills, this.scan);
+    const all = reconcile(state.skills, state.repositories, this.scan);
     const visible = this.applyFilter(all, state.statusFilter);
     const { groupBy } = state;
 
     if (!element) {
       // Root: bucket or flat.
       if (groupBy === 'flat') {
-        return this.toNodes(sortSkills(visible, state.sortingOption));
+        return this.renderSkills(sortSkills(visible, state.sortingOption), all, 'flat');
       }
       return this.groupBuckets(visible, groupBy);
     }
@@ -99,7 +106,14 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     // Branch: children of a bucket.
     if (element.contextValue === 'group' && element.bucketKey !== undefined) {
       const inBucket = visible.filter(s => this.bucketKey(s, groupBy) === element.bucketKey);
-      return this.toNodes(sortSkills(inBucket, state.sortingOption));
+      return this.renderSkills(
+        sortSkills(inBucket, state.sortingOption),
+        all,
+        `${groupBy}:${element.bucketKey}`,
+      );
+    }
+    if (element.contextValue === 'repository') {
+      return this.toSkillNodes(element.repositorySkills ?? []);
     }
     return [];
   }
@@ -140,17 +154,30 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       if (!items || items.length === 0) { continue; }
       byKey.delete(key);
       const diffCount = items.filter(s => isDiffStatus(s.status)).length;
-      const suffix = diffCount > 0 ? ` (${diffCount})` : ` (${items.length})`;
-      nodes.push(new SkillNode(this.bucketLabel(dim, key) + suffix,
-        vscode.TreeItemCollapsibleState.Expanded, 'group', undefined, key));
+      nodes.push(this.toGroupNode(
+        dim,
+        key,
+        diffCount > 0 ? diffCount : items.length,
+      ));
     }
     // Any keys not in the canonical order (e.g. user categories beyond Default).
     for (const [key, items] of byKey) {
-      const suffix = ` (${items.length})`;
-      nodes.push(new SkillNode(this.bucketLabel(dim, key) + suffix,
-        vscode.TreeItemCollapsibleState.Expanded, 'group', undefined, key));
+      nodes.push(this.toGroupNode(dim, key, items.length));
     }
     return nodes;
+  }
+
+  private toGroupNode(dim: GroupDimension, key: string, count: number): SkillNode {
+    const node = new SkillNode(
+      this.bucketLabel(dim, key),
+      vscode.TreeItemCollapsibleState.Expanded,
+      'group',
+      undefined,
+      key,
+    );
+    node.description = `${count}`;
+    node.iconPath = groupIcon(dim, key);
+    return node;
   }
 
   /** Canonical bucket ordering per dimension. */
@@ -190,8 +217,128 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     }
   }
 
-  private toNodes(skills: DecoratedSkill[]): SkillNode[] {
-    return skills.map(s => new SkillNode(s.name, vscode.TreeItemCollapsibleState.None,
-      s.extra ? 'extraSkill' : 'declaredSkill', s));
+  private renderSkills(
+    skills: DecoratedSkill[],
+    all: DecoratedSkill[],
+    parentKey: string,
+  ): SkillNode[] {
+    const totalByRepository = new Map<string, number>();
+    for (const skill of all) {
+      const key = repositoryKey(skill);
+      totalByRepository.set(key, (totalByRepository.get(key) ?? 0) + 1);
+    }
+
+    const visibleByRepository = new Map<string, DecoratedSkill[]>();
+    for (const skill of skills) {
+      const key = repositoryKey(skill);
+      const items = visibleByRepository.get(key) ?? [];
+      items.push(skill);
+      visibleByRepository.set(key, items);
+    }
+
+    const nodes: SkillNode[] = [];
+    const renderedRepositories = new Set<string>();
+    for (const skill of skills) {
+      const key = repositoryKey(skill);
+      if (renderedRepositories.has(key)) { continue; }
+      renderedRepositories.add(key);
+      const repositorySkills = visibleByRepository.get(key) ?? [skill];
+      const availableCount = skill.repository.availableSkills?.length ?? 0;
+      const isMultiSkill = Math.max(totalByRepository.get(key) ?? 0, availableCount) > 1;
+      if (!isMultiSkill) {
+        nodes.push(this.toSkillNode(skill));
+        continue;
+      }
+
+      const node = new SkillNode(
+        `${skill.repository.name} (${repositorySkills.length})`,
+        vscode.TreeItemCollapsibleState.Expanded,
+        'repository',
+        undefined,
+        undefined,
+        skill.repository,
+        repositorySkills,
+      );
+      node.id = `repository:${parentKey}:${key}`;
+      node.iconPath = sourceIcon(skill.sourceType, skill.source);
+      node.tooltip = new vscode.MarkdownString(
+        `**${skill.repository.name}**\n\nsource: \`${skill.source || '—'}\`\n\n`
+        + `${repositorySkills.length} visible skill(s)`,
+      );
+      nodes.push(node);
+    }
+    return nodes;
   }
+
+  private toSkillNodes(skills: DecoratedSkill[]): SkillNode[] {
+    return skills.map(skill => this.toSkillNode(skill));
+  }
+
+  private toSkillNode(s: DecoratedSkill): SkillNode {
+    const installed = s.installedAgents.length > 0;
+    const actual = installed ? 'installed' : 'missing';
+    const contextValue: SkillNodeContext = s.extra
+      ? 'extraSkill.unwanted.installed'
+      : `declaredSkill.${s.wanted ? 'wanted' : 'unwanted'}.${actual}`;
+    const node = new SkillNode(
+      s.name,
+      vscode.TreeItemCollapsibleState.None,
+      contextValue,
+      s,
+    );
+    node.iconPath = sourceIcon(s.sourceType, s.source);
+    return node;
+  }
+
+}
+
+function repositoryKey(skill: DecoratedSkill): string {
+  return `${skill.scope}:${skill.repoId}`;
+}
+
+function groupIcon(dim: GroupDimension, key: string): vscode.ThemeIcon {
+  if (dim === 'status') {
+    if (key === '__wanted__') {
+      return new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('charts.green'));
+    }
+    if (key === '__unwanted__') {
+      return new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
+    }
+    return new vscode.ThemeIcon('warning', new vscode.ThemeColor('list.warningForeground'));
+  }
+  if (dim === 'source') {
+    return new vscode.ThemeIcon('repo', new vscode.ThemeColor('charts.blue'));
+  }
+  if (dim === 'scope') {
+    const icon = key === 'global' ? 'globe' : 'root-folder';
+    return new vscode.ThemeIcon(icon, new vscode.ThemeColor('charts.green'));
+  }
+  return new vscode.ThemeIcon('tag', new vscode.ThemeColor('charts.purple'));
+}
+
+function sourceIcon(
+  sourceType: DecoratedSkill['sourceType'],
+  source: string,
+): vscode.Uri | vscode.ThemeIcon {
+  if (sourceType === 'github') {
+    const owner = githubOwner(source);
+    if (owner) {
+      return vscode.Uri.parse(`https://github.com/${encodeURIComponent(owner)}.png?size=32`);
+    }
+    return new vscode.ThemeIcon('github');
+  }
+  switch (sourceType) {
+    case 'local': return new vscode.ThemeIcon('folder');
+    case 'marketplace':
+    case 'skillhub': return new vscode.ThemeIcon('globe');
+    case 'unknown': return new vscode.ThemeIcon('question');
+  }
+}
+
+function githubOwner(source: string): string | undefined {
+  const { spec } = parseSource(source);
+  const match = spec.trim().match(
+    /^(?:https?:\/\/github\.com\/|git@github\.com:)?([^/\s]+)\/[^/\s#]+/i,
+  );
+  return match?.[1];
 }
