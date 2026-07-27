@@ -2,7 +2,7 @@
   "name": "skills-deck",
   "displayName": "Skills Deck — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "Apache-2.0",
   "publisher": "pujie",
   "engines": {
@@ -294,6 +294,12 @@
         "title": "Replace with Managed Link",
         "category": "Skills Deck",
         "icon": "$(replace)"
+      },
+      {
+        "command": "skillsDeck.openAgentSkillsDirectory",
+        "title": "Open Skills Directory",
+        "category": "Skills Deck",
+        "icon": "$(folder-opened)"
       }
     ],
     "submenus": [
@@ -335,7 +341,8 @@
         { "command": "skillsDeck.syncAgent", "when": "false" },
         { "command": "skillsDeck.editAgent", "when": "false" },
         { "command": "skillsDeck.deleteAgent", "when": "false" },
-        { "command": "skillsDeck.replaceAgentOverride", "when": "false" }
+        { "command": "skillsDeck.replaceAgentOverride", "when": "false" },
+        { "command": "skillsDeck.openAgentSkillsDirectory", "when": "false" }
       ],
       "view/title": [
         { "command": "skillsDeck.addSkill", "when": "view == skillsDeck.view", "group": "navigation@1" },
@@ -382,7 +389,8 @@
         { "command": "skillsDeck.syncAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.enabled\\./", "group": "1_manage@1" },
         { "command": "skillsDeck.editAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\./", "group": "2_edit@1" },
         { "command": "skillsDeck.deleteAgent", "when": "view == skillsDeck.agents && viewItem =~ /^agents\\.agent\\.disabled\\.custom$/", "group": "3_delete@1" },
-        { "command": "skillsDeck.replaceAgentOverride", "when": "view == skillsDeck.agents && viewItem == agents.skill.override", "group": "1_manage@1" }
+        { "command": "skillsDeck.replaceAgentOverride", "when": "view == skillsDeck.agents && viewItem == agents.skill.override", "group": "1_manage@1" },
+        { "command": "skillsDeck.openAgentSkillsDirectory", "when": "view == skillsDeck.agents && (viewItem == agents.library || viewItem =~ /^agents\\.agent\\./)", "group": "2_open@1" }
       ]
     },
     "viewsWelcome": [

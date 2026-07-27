@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as agentStore from './agentStore';
@@ -11,6 +12,7 @@ import {
 } from './agentSync';
 import { AgentNode, AgentsTreeProvider } from './agentsView';
 import { AgentPreference, CustomAgent, ResolvedAgent } from './types';
+import { centralSkillsDir } from './known-agents';
 
 interface AgentCommandDeps {
   provider: AgentsTreeProvider;
@@ -151,6 +153,22 @@ export function registerAgentCommands(deps: AgentCommandDeps): vscode.Disposable
     });
     reportSummary(summary, output);
     await changed();
+  });
+
+  register('skillsDeck.openAgentSkillsDirectory', async (node: AgentNode) => {
+    const target = node?.agent?.globalSkillsDir
+      ?? (node?.kind === 'library' ? centralSkillsDir('global') : undefined);
+    if (!target) { return; }
+    try {
+      const stat = await fs.promises.stat(target);
+      const directory = stat.isDirectory() ? target : path.dirname(target);
+      const opened = await vscode.env.openExternal(vscode.Uri.file(directory));
+      if (!opened) {
+        vscode.window.showWarningMessage(`Could not open directory: ${directory}`);
+      }
+    } catch {
+      vscode.window.showWarningMessage(`Directory does not exist: ${target}`);
+    }
   });
 
   register('skillsDeck.addAgent', async () => {

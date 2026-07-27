@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const scanner = new SkillScanner();
   const provider = new SkillsTreeProvider();
-  const agentsProvider = new AgentsTreeProvider();
+  const agentsProvider = new AgentsTreeProvider(context.extensionUri);
   const details = new DetailsTreeProvider();
 
   const treeView = vscode.window.createTreeView('skillsDeck.view', {

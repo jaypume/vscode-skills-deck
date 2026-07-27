@@ -33,6 +33,8 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
     agents: [],
   };
 
+  constructor(private readonly extensionUri: vscode.Uri) {}
+
   setScan(scan: ScanResult): void {
     this.scan = scan;
     this.refresh();
@@ -118,10 +120,17 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
       agent.custom ? 'custom' : 'builtin',
     ].join('.');
     node.description = compactPath(agent.rootDir);
-    node.iconPath = new vscode.ThemeIcon(
-      'robot',
-      new vscode.ThemeColor(agent.enabled ? 'testing.iconPassed' : 'disabledForeground'),
-    );
+    node.iconPath = agent.custom
+      ? new vscode.ThemeIcon(
+        'robot',
+        new vscode.ThemeColor(agent.enabled ? 'testing.iconPassed' : 'disabledForeground'),
+      )
+      : vscode.Uri.joinPath(
+        this.extensionUri,
+        'media',
+        'agents',
+        `${agent.id}${agent.enabled ? '' : '-disabled'}.png`,
+      );
     node.tooltip = new vscode.MarkdownString([
       `**${agent.displayName}**`,
       `ID: \`${agent.id}\``,

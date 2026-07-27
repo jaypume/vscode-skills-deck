@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [1.0.2] - 2026-07-27
 
 ### Added
 
@@ -10,6 +10,9 @@ All notable changes to this project are documented in this file.
 - Safe global and project skill synchronization through managed symlinks.
 - Agent-owned, override, missing, and broken-link observations.
 - First-run Agent detection with a preview-and-confirm workflow.
+- Bundled product icons for built-in Agents, with muted variants for disabled
+  Agents.
+- Open Skills Directory actions for Agent and global library nodes.
 
 ### Changed
 
