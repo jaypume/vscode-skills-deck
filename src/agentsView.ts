@@ -26,6 +26,10 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
   private readonly changeEmitter = new vscode.EventEmitter<AgentNode | undefined>();
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
+  /** TreeItem IDs of currently expanded nodes. Mirrors TreeView state so
+   * keyboard navigation can compute the visible flat sequence. */
+  private readonly expanded = new Set<string>();
+
   private scan: ScanResult = {
     globalSkills: [],
     projectSkills: [],
@@ -42,6 +46,30 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
 
   refresh(): void {
     this.changeEmitter.fire(undefined);
+  }
+
+  /** Called by the activator to keep the expanded mirror in sync with TreeView. */
+  bindTreeView(view: vscode.TreeView<AgentNode>): void {
+    view.onDidExpandElement(e => { this.expanded.add(String(e.element.id ?? '')); });
+    view.onDidCollapseElement(e => { this.expanded.delete(String(e.element.id ?? '')); });
+  }
+
+  /** Visible nodes in render order, honoring the user's expand/collapse state. */
+  getVisibleFlat(): AgentNode[] {
+    const out: AgentNode[] = [];
+    const walk = (parent: AgentNode | undefined) => {
+      const children = this.getChildren(parent) ?? [];
+      for (const node of children) {
+        const id = String(node.id ?? '');
+        out.push(node);
+        if (id && this.expanded.has(id)
+          && node.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
+          walk(node);
+        }
+      }
+    };
+    walk(undefined);
+    return out;
   }
 
   getTreeItem(element: AgentNode): vscode.TreeItem {

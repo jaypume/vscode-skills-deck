@@ -44,6 +44,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     treeDataProvider: agentsProvider,
   });
   context.subscriptions.push(treeView, agentsView, detailsView);
+  provider.bindTreeView(treeView);
+  agentsProvider.bindTreeView(agentsView);
   context.subscriptions.push(
     ...registerTreeExpansion(
       treeView,
@@ -112,6 +114,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       details.showAgent(node?.agent);
     }
   }));
+
+  // Keyboard ↑/↓ navigation: sync selection to the focused row so the
+  // Details pane updates without requiring a click/Enter. Without this,
+  // TreeView.selection only changes on click and Details drift.
+  type NavDirection = 1 | -1;
+  const navSkill = (dir: NavDirection) => async () => {
+    const flat = provider.getVisibleFlat();
+    const current = treeView.selection[0];
+    const idx = current ? flat.findIndex(node => node === current) : -1;
+    const target = idx >= 0 ? flat[idx + dir] : flat[dir === 1 ? 0 : flat.length - 1];
+    if (!target) { return; }
+    await treeView.reveal(target, { select: true, focus: true, expand: 0 });
+  };
+  const navAgent = (dir: NavDirection) => async () => {
+    const flat = agentsProvider.getVisibleFlat();
+    const current = agentsView.selection[0];
+    const idx = current ? flat.findIndex(node => node === current) : -1;
+    const target = idx >= 0 ? flat[idx + dir] : flat[dir === 1 ? 0 : flat.length - 1];
+    if (!target) { return; }
+    await agentsView.reveal(target, { select: true, focus: true, expand: 0 });
+  };
+  context.subscriptions.push(
+    vscode.commands.registerCommand('skillsDeck.focusNextSkill', navSkill(1)),
+    vscode.commands.registerCommand('skillsDeck.focusPrevSkill', navSkill(-1)),
+    vscode.commands.registerCommand('skillsDeck.focusNextAgent', navAgent(1)),
+    vscode.commands.registerCommand('skillsDeck.focusPrevAgent', navAgent(-1)),
+  );
 
   let watchers: vscode.Disposable[] = [];
   const rebuildWatchers = () => {

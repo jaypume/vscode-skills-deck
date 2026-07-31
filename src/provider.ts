@@ -69,6 +69,10 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   private _onDidChange = new vscode.EventEmitter<SkillNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChange.event;
 
+  /** TreeItem IDs of currently expanded nodes. Mirrors TreeView state so
+   * keyboard navigation can compute the visible flat sequence. */
+  private readonly expanded = new Set<string>();
+
   private scan: ScanResult = {
     globalSkills: [],
     projectSkills: [],
@@ -87,6 +91,11 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     this.scan = scan;
     this.refresh();
   }
+  /** Called by the activator to keep the expanded mirror in sync with TreeView. */
+  bindTreeView(view: vscode.TreeView<SkillNode>): void {
+    view.onDidExpandElement(e => { this.expanded.add(String(e.element.id)); });
+    view.onDidCollapseElement(e => { this.expanded.delete(String(e.element.id)); });
+  }
 
   refresh(keepSelection = true): void {
     this._onDidChange.fire(undefined);
@@ -99,8 +108,25 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     this.refresh();
   }
 
-  getTreeItem(element: SkillNode): SkillNode { return element; }
+  /** Visible nodes in render order, honoring the user's expand/collapse state. */
+  getVisibleFlat(): SkillNode[] {
+    const out: SkillNode[] = [];
+    const walk = (parent: SkillNode | undefined) => {
+      const children = this.getChildren(parent) ?? [];
+      for (const node of children) {
+        const id = String(node.id ?? '');
+        out.push(node);
+        if (id && this.expanded.has(id)
+          && node.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
+          walk(node);
+        }
+      }
+    };
+    walk(undefined);
+    return out;
+  }
 
+  getTreeItem(element: SkillNode): SkillNode { return element; }
   getParent(): vscode.ProviderResult<SkillNode> { return null; }
 
   getChildren(element?: SkillNode): SkillNode[] {
