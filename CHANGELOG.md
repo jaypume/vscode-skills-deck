@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-07-31
+
+### Added
+
+- Keyboard ↑/↓ in the Skills and Agents trees now syncs the selection to
+  the focused row, so the Details pane updates without a click or Enter.
+  Reuses the existing `onDidChangeSelection` handler via `reveal({select:
+  true, focus: true})` on the next/previous visible node — the user's
+  expand/collapse state is preserved.
+
 ## [1.2.1] - 2026-07-31
 
 ### Added
