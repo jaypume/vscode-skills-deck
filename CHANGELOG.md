@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.1] - 2026-07-31
+
+### Fixed
+
+- Keyboard ↑/↓ in the Skills and Agents trees no longer snaps back to the
+  first row on every keystroke. The current row is now matched by stable
+  `TreeItem.id` instead of reference equality, since `getChildren()` rebuilds
+  fresh node instances on each call.
+
 ## [1.3.0] - 2026-07-31
 
 ### Added

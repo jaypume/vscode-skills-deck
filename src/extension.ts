@@ -119,18 +119,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Details pane updates without requiring a click/Enter. Without this,
   // TreeView.selection only changes on click and Details drift.
   type NavDirection = 1 | -1;
+  // Match the current row by stable TreeItem.id, not reference equality:
+  // getChildren() rebuilds fresh node instances on every call, so `===` never
+  // matches and navigation would snap back to the first row on every keystroke.
   const navSkill = (dir: NavDirection) => async () => {
     const flat = provider.getVisibleFlat();
-    const current = treeView.selection[0];
-    const idx = current ? flat.findIndex(node => node === current) : -1;
+    const currentId = treeView.selection[0]?.id;
+    const idx = currentId !== undefined
+      ? flat.findIndex(node => node.id === currentId) : -1;
     const target = idx >= 0 ? flat[idx + dir] : flat[dir === 1 ? 0 : flat.length - 1];
     if (!target) { return; }
     await treeView.reveal(target, { select: true, focus: true, expand: 0 });
   };
   const navAgent = (dir: NavDirection) => async () => {
     const flat = agentsProvider.getVisibleFlat();
-    const current = agentsView.selection[0];
-    const idx = current ? flat.findIndex(node => node === current) : -1;
+    const currentId = agentsView.selection[0]?.id;
+    const idx = currentId !== undefined
+      ? flat.findIndex(node => node.id === currentId) : -1;
     const target = idx >= 0 ? flat[idx + dir] : flat[dir === 1 ? 0 : flat.length - 1];
     if (!target) { return; }
     await agentsView.reveal(target, { select: true, focus: true, expand: 0 });
