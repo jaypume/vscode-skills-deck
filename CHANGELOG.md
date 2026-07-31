@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.2] - 2026-07-31
+
+### Fixed
+
+- Keyboard ↑/↓ now walks into grouped and repository-nested skills instead of
+  snapping back to the first row. Group nodes carry a stable `TreeItem.id`,
+  every node records its parent id so `getParent()` can guide `reveal()` to
+  nested rows, and the visible-flat computation honors the initial expand
+  state as well as user collapse/expand.
+
 ## [1.3.1] - 2026-07-31
 
 ### Fixed

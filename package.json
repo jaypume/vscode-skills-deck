@@ -2,7 +2,7 @@
   "name": "skills-deck",
   "displayName": "Skills Deck — Declarative Agent Skills",
   "description": "Declaratively manage AI agent skills: declare what you want, reconcile against what's installed, sync to/from disk. Works across Claude Code, Cursor, Windsurf, Copilot, Codex, and more.",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "license": "Apache-2.0",
   "publisher": "pujie",
   "engines": {

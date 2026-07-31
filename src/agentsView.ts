@@ -10,6 +10,9 @@ import { centralSkillsDir, compactPath } from './known-agents';
 type AgentNodeKind = 'library' | 'group' | 'agent' | 'skill';
 
 export class AgentNode extends vscode.TreeItem {
+  /** Stable id of the parent node; see SkillNode.parentId for rationale. */
+  parentId?: string;
+
   constructor(
     public readonly kind: AgentNodeKind,
     label: string,
@@ -26,9 +29,10 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
   private readonly changeEmitter = new vscode.EventEmitter<AgentNode | undefined>();
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
-  /** TreeItem IDs of currently expanded nodes. Mirrors TreeView state so
-   * keyboard navigation can compute the visible flat sequence. */
-  private readonly expanded = new Set<string>();
+  /** Per-node expand override from user interaction. Absent = fall back to the
+   * node's initial collapsibleState. Mirrors TreeView state so keyboard
+   * navigation can compute the visible flat sequence. */
+  private readonly expanded = new Map<string, boolean>();
 
   private scan: ScanResult = {
     globalSkills: [],
@@ -50,22 +54,36 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
 
   /** Called by the activator to keep the expanded mirror in sync with TreeView. */
   bindTreeView(view: vscode.TreeView<AgentNode>): void {
-    view.onDidExpandElement(e => { this.expanded.add(String(e.element.id ?? '')); });
-    view.onDidCollapseElement(e => { this.expanded.delete(String(e.element.id ?? '')); });
+    view.onDidExpandElement(e => {
+      const id = e.element.id;
+      if (id !== undefined) { this.expanded.set(id, true); }
+    });
+    view.onDidCollapseElement(e => {
+      const id = e.element.id;
+      if (id !== undefined) { this.expanded.set(id, false); }
+    });
+  }
+
+  /** Whether a node's children are currently shown. Follows the node's initial
+   * collapsibleState unless the user has expanded/collapsed it. */
+  private isOpen(node: AgentNode): boolean {
+    if (node.collapsibleState === vscode.TreeItemCollapsibleState.None) { return false; }
+    const id = node.id;
+    if (id === undefined) {
+      return node.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
+    }
+    return this.expanded.has(id)
+      ? this.expanded.get(id)!
+      : node.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
   }
 
   /** Visible nodes in render order, honoring the user's expand/collapse state. */
   getVisibleFlat(): AgentNode[] {
     const out: AgentNode[] = [];
     const walk = (parent: AgentNode | undefined) => {
-      const children = this.getChildren(parent) ?? [];
-      for (const node of children) {
-        const id = String(node.id ?? '');
+      for (const node of this.getChildren(parent) ?? []) {
         out.push(node);
-        if (id && this.expanded.has(id)
-          && node.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
-          walk(node);
-        }
+        if (this.isOpen(node)) { walk(node); }
       }
     };
     walk(undefined);
@@ -74,6 +92,14 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
 
   getTreeItem(element: AgentNode): vscode.TreeItem {
     return element;
+  }
+
+  /** Walks the ancestor chain via parentId so reveal() can reach nested nodes. */
+  getParent(element: AgentNode): vscode.ProviderResult<AgentNode> {
+    if (!element.parentId) { return undefined; }
+    const parent = new AgentNode('group', '', vscode.TreeItemCollapsibleState.Expanded);
+    parent.id = element.parentId;
+    return parent;
   }
 
   getChildren(element?: AgentNode): AgentNode[] {
@@ -142,6 +168,7 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
       agent,
     );
     node.id = `agent:${agent.id}`;
+    node.parentId = `agent-group:${agent.enabled ? 'enabled' : 'disabled'}`;
     node.contextValue = [
       'agents.agent',
       agent.enabled ? 'enabled' : 'disabled',
@@ -182,6 +209,7 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<AgentNode> {
       observation,
     );
     node.id = `agent-skill:${agent.id}:${observation.scope}:${observation.skillId}`;
+    node.parentId = `agent:${agent.id}`;
     node.contextValue = `agents.skill.${observation.state}`;
     node.description = `${observation.scope} · ${stateLabel(observation.state)}`;
     node.iconPath = stateIcon(observation.state);

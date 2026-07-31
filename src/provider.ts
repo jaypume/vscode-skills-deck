@@ -35,6 +35,11 @@ type SkillNodeContext =
 
 /** A tree node. Leaf = a skill; branch = a group bucket. */
 export class SkillNode extends vscode.TreeItem {
+  /** Stable id of the parent node. Lets getParent() return a placeholder
+   * parent so TreeView.reveal() can walk the ancestor chain and reach
+   * deeply nested skills during keyboard navigation. */
+  parentId?: string;
+
   constructor(
     label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
@@ -69,9 +74,10 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   private _onDidChange = new vscode.EventEmitter<SkillNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChange.event;
 
-  /** TreeItem IDs of currently expanded nodes. Mirrors TreeView state so
-   * keyboard navigation can compute the visible flat sequence. */
-  private readonly expanded = new Set<string>();
+  /** Per-node expand override from user interaction. Absent = fall back to the
+   * node's initial collapsibleState. Mirrors TreeView state so keyboard
+   * navigation can compute the visible flat sequence. */
+  private readonly expanded = new Map<string, boolean>();
 
   private scan: ScanResult = {
     globalSkills: [],
@@ -93,8 +99,27 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   }
   /** Called by the activator to keep the expanded mirror in sync with TreeView. */
   bindTreeView(view: vscode.TreeView<SkillNode>): void {
-    view.onDidExpandElement(e => { this.expanded.add(String(e.element.id)); });
-    view.onDidCollapseElement(e => { this.expanded.delete(String(e.element.id)); });
+    view.onDidExpandElement(e => {
+      const id = e.element.id;
+      if (id !== undefined) { this.expanded.set(id, true); }
+    });
+    view.onDidCollapseElement(e => {
+      const id = e.element.id;
+      if (id !== undefined) { this.expanded.set(id, false); }
+    });
+  }
+
+  /** Whether a node's children are currently shown. Follows the node's initial
+   * collapsibleState unless the user has expanded/collapsed it. */
+  private isOpen(node: SkillNode): boolean {
+    if (node.collapsibleState === vscode.TreeItemCollapsibleState.None) { return false; }
+    const id = node.id;
+    if (id === undefined) {
+      return node.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
+    }
+    return this.expanded.has(id)
+      ? this.expanded.get(id)!
+      : node.collapsibleState === vscode.TreeItemCollapsibleState.Expanded;
   }
 
   refresh(keepSelection = true): void {
@@ -112,14 +137,9 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   getVisibleFlat(): SkillNode[] {
     const out: SkillNode[] = [];
     const walk = (parent: SkillNode | undefined) => {
-      const children = this.getChildren(parent) ?? [];
-      for (const node of children) {
-        const id = String(node.id ?? '');
+      for (const node of this.getChildren(parent) ?? []) {
         out.push(node);
-        if (id && this.expanded.has(id)
-          && node.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
-          walk(node);
-        }
+        if (this.isOpen(node)) { walk(node); }
       }
     };
     walk(undefined);
@@ -127,7 +147,16 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
   }
 
   getTreeItem(element: SkillNode): SkillNode { return element; }
-  getParent(): vscode.ProviderResult<SkillNode> { return null; }
+
+  /** Walks the ancestor chain via parentId so reveal() can reach nested nodes.
+   * Returns a lightweight node carrying only the parent's stable id; VS Code
+   * resolves it against getChildren() by id. */
+  getParent(element: SkillNode): vscode.ProviderResult<SkillNode> {
+    if (!element.parentId) { return undefined; }
+    const parent = new SkillNode('', vscode.TreeItemCollapsibleState.Expanded, 'group');
+    parent.id = element.parentId;
+    return parent;
+  }
 
   getChildren(element?: SkillNode): SkillNode[] {
     const state = read();
@@ -174,7 +203,8 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       );
     }
     if (element.contextValue === 'repository') {
-      return this.toSkillNodes(element.repositorySkills ?? []);
+      return this.toSkillNodes(element.repositorySkills ?? [])
+        .map(node => { node.parentId = element.id; return node; });
     }
     return [];
   }
@@ -236,6 +266,7 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       undefined,
       key,
     );
+    node.id = `group:${dim}:${key}`;
     node.description = `${count}`;
     node.iconPath = groupIcon(dim, key);
     return node;
@@ -284,7 +315,13 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
     parentKey: string,
     groupRepositories: boolean,
   ): SkillNode[] {
-    if (!groupRepositories) { return this.toSkillNodes(skills); }
+    // Stable id of the group bucket above this level (undefined in flat mode,
+    // where skills/repos hang directly off the root).
+    const groupAboveId = parentKey === 'flat' ? undefined : `group:${parentKey}`;
+    if (!groupRepositories) {
+      return this.toSkillNodes(skills)
+        .map(node => { node.parentId = groupAboveId; return node; });
+    }
 
     const totalByRepository = new Map<string, number>();
     for (const skill of all) {
@@ -310,7 +347,9 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
       const availableCount = skill.repository.availableSkills?.length ?? 0;
       const isMultiSkill = Math.max(totalByRepository.get(key) ?? 0, availableCount) > 1;
       if (!isMultiSkill) {
-        nodes.push(this.toSkillNode(skill));
+        const single = this.toSkillNode(skill);
+        single.parentId = groupAboveId;
+        nodes.push(single);
         continue;
       }
 
@@ -324,6 +363,7 @@ export class SkillsTreeProvider implements vscode.TreeDataProvider<SkillNode> {
         repositorySkills,
       );
       node.id = `repository:${parentKey}:${key}`;
+      node.parentId = groupAboveId;
       node.iconPath = sourceIcon(skill.sourceType, skill.source);
       const repositorySource = skill.repository.source || skill.source;
       node.tooltip = new vscode.MarkdownString(
