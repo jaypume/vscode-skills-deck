@@ -78,7 +78,11 @@ export class SkillScanner {
     const skills: InstalledSkill[] = [];
     for (const entry of entries.values()) {
       if (entry.broken) { continue; }
-      const parsed = await this.parseSkillMd(path.join(entry.path, 'SKILL.md'));
+      const skillMdPath = path.join(entry.path, 'SKILL.md');
+      const parsed = await this.parseSkillMd(skillMdPath);
+      let updatedAt: string | undefined;
+      try { updatedAt = (await fs.promises.stat(skillMdPath)).mtime.toISOString(); }
+      catch { /* mtime unavailable — leave undefined */ }
       skills.push({
         folderName: entry.name,
         name: parsed?.name ?? entry.name,
@@ -88,6 +92,7 @@ export class SkillScanner {
         agents: [],
         observations: [],
         source: sources.get(entry.name),
+        updatedAt,
       });
     }
     return skills;

@@ -243,7 +243,14 @@ export class DetailsTreeProvider implements vscode.TreeDataProvider<DetailsNode>
         icon: 'calendar',
       });
     }
-
+    if (skill.updatedAt) {
+      properties.push({
+        key: 'updatedAt',
+        label: 'Updated',
+        value: formatLocalDate(skill.updatedAt),
+        icon: 'history',
+      });
+    }
     return this.toPropertyNodes(
       `${skill.scope}:${skill.repoId}:${skill.skillId}`,
       properties,

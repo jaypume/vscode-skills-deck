@@ -64,6 +64,7 @@ export function decorateSkill(declared: ResolvedSkill, installed: InstalledMap):
     hasAgentDiff: actual?.observations.some(item =>
       item.enabled && (item.state === 'missing' || item.state === 'broken-link')) ?? false,
     installedPath: actual?.path,
+    updatedAt: actual?.updatedAt,
   };
 }
 
@@ -115,6 +116,7 @@ export function computeExtras(
         hasAgentDiff: installed.observations.some(item =>
           item.enabled && (item.state === 'missing' || item.state === 'broken-link')),
         installedPath: installed.path,
+        updatedAt: installed.updatedAt,
         repository,
         extra: true,
       });

@@ -172,6 +172,8 @@ export interface InstalledSkill {
   observations: AgentSkillObservation[];
   /** Lock-file source if available (informational). */
   source?: string;
+  /** ISO timestamp of the on-disk SKILL.md mtime, when available. */
+  updatedAt?: string;
 }
 
 export interface ScanResult {
@@ -202,6 +204,8 @@ export interface DecoratedSkill extends ResolvedSkill {
   hasAgentDiff: boolean;
   /** On-disk path (from scan) when installed. */
   installedPath?: string;
+  /** ISO timestamp of the latest local update (SKILL.md mtime) when installed. */
+  updatedAt?: string;
   /** True for undeclared-but-installed pseudo entries. */
   extra?: boolean;
 }
