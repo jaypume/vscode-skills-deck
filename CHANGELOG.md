@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.1] - 2026-07-31
+
+### Added
+
+- `Updated` row in the Details view showing the on-disk `SKILL.md` mtime when a
+  skill is installed. Surfaces the latest local update without extra network or
+  git calls.
+
 ## [1.2.0] - 2026-07-28
 
 ### Changed
