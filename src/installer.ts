@@ -5,19 +5,16 @@
  * CLI using execFile, so no shell or VS Code terminal is created.
  */
 
-import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { promisify } from 'util';
 import * as vscode from 'vscode';
 import { ResolvedSkill, SkillScope } from './types';
 import { classifySource, localPath, npxAddArg } from './source';
 import { centralSkillsDir } from './known-agents';
+import { runNpx } from './npx';
 import { cleanupDisabledAgents, syncEnabledAgents } from './agentSync';
 import * as agentStore from './agentStore';
-
-const execFileAsync = promisify(execFile);
 
 const onOperationCompletedEmitter = new vscode.EventEmitter<void>();
 export const onOperationCompleted = onOperationCompletedEmitter.event;
@@ -241,13 +238,10 @@ async function runSkillsCli(args: string[], scope: SkillScope): Promise<void> {
     : os.homedir();
   if (!cwd) { throw new Error('No workspace open for project-scope operation'); }
 
-  const result = await execFileAsync('npx', ['--yes', 'skills', ...args], {
+  const result = await runNpx(['--yes', 'skills', ...args], {
     cwd,
-    env: process.env,
-    encoding: 'utf8',
     maxBuffer: 2 * 1024 * 1024,
     timeout: 5 * 60 * 1000,
-    windowsHide: true,
   });
   const output = `${result.stdout}\n${result.stderr}`;
   if (output.includes('No matching skills found for:')) {

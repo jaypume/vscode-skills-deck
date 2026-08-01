@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.3] - 2026-08-01
+
+### Fixed
+
+- Remote skill discovery, install, uninstall and update on Windows no longer
+  fail with `spawn npx ENOENT`. The `npx skills` call now goes through
+  `cross-spawn`, which resolves the Windows `npx.cmd` shim transparently
+  without spawning a shell or opening a terminal.
+
 ## [1.3.2] - 2026-07-31
 
 ### Fixed

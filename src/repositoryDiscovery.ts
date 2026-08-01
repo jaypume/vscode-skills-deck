@@ -1,12 +1,9 @@
-import { execFile } from 'child_process';
 import * as os from 'os';
-import { promisify } from 'util';
 import * as vscode from 'vscode';
 import { RepositorySkill } from './types';
 import { npxAddArg } from './source';
 import { parseSkillList } from './skillList';
-
-const execFileAsync = promisify(execFile);
+import { runNpx } from './npx';
 
 export async function discoverRepositorySkills(source: string): Promise<RepositorySkill[]> {
   return vscode.window.withProgress(
@@ -16,16 +13,13 @@ export async function discoverRepositorySkills(source: string): Promise<Reposito
       cancellable: false,
     },
     async () => {
-      const result = await execFileAsync(
-        'npx',
+      const result = await runNpx(
         ['--yes', 'skills', 'add', npxAddArg(source), '--list'],
         {
           cwd: os.homedir(),
           env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
-          encoding: 'utf8',
           maxBuffer: 8 * 1024 * 1024,
           timeout: 5 * 60 * 1000,
-          windowsHide: true,
         },
       );
       const skills = parseSkillList(`${result.stdout}\n${result.stderr}`);
