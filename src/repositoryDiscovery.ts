@@ -22,11 +22,29 @@ export async function discoverRepositorySkills(source: string): Promise<Reposito
           timeout: 5 * 60 * 1000,
         },
       );
-      const skills = parseSkillList(`${result.stdout}\n${result.stderr}`);
+      const output = `${result.stdout}\n${result.stderr}`;
+      const skills = parseSkillList(output);
       if (skills.length === 0) {
-        throw new Error('No skills were discovered in this repository.');
+        const summary = discoveryOutputSummary(output);
+        throw new Error(
+          `No skills were discovered from ${npxAddArg(source)}.`
+          + (summary ? ` CLI output: ${summary}` : ''),
+        );
       }
       return skills;
     },
   );
+}
+
+function discoveryOutputSummary(output: string): string {
+  const lines = output
+    .replace(/\u001b(?:\[[0-?]*[ -/]*[@-~]|\][^\u0007]*(?:\u0007|\u001b\\))/g, '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(line => line.replace(/^[^\p{L}\p{N}]+/u, '').trim())
+    .filter(Boolean);
+  const statusLines = lines.filter(line =>
+    /found|no valid skills|no skills|error|failed/i.test(line));
+  const summary = (statusLines.length > 0 ? statusLines : lines.slice(-3)).slice(-3).join(' | ');
+  return summary.length > 500 ? `${summary.slice(0, 497)}...` : summary;
 }
